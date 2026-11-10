@@ -1,0 +1,1860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#140818" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="color-scheme" content="dark" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%23140818'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%237a5cff'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%233ee0c8'/%3E%3C/svg%3E" />
+  <title>Moonveil Club</title>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+    }
+  }
+  </script>
+  <style>
+    :root {
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --ink: #efe7ff;
+      --paper: rgba(22, 12, 36, 0.92);
+      --accent: #c46cff;
+      --good: #3ee0c8;
+      --muted: #b5a8d0;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; position: fixed; inset: 0;
+      background: #140818;
+      color: var(--ink);
+      font-family: "Segoe UI", "Trebuchet MS", "Helvetica Neue", sans-serif;
+      touch-action: none;
+      overscroll-behavior: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+    #view, #view canvas, #labels {
+      position: fixed; inset: 0; width: 100%; height: 100%; display: block;
+    }
+    #view { z-index: 0; }
+    #labels { z-index: 2; pointer-events: none; overflow: hidden; }
+    .nametag {
+      position: absolute; left: 0; top: 0;
+      transform: translate(-50%, -120%);
+      background: rgba(22, 12, 36, 0.9);
+      color: var(--ink);
+      font-size: 13px; font-weight: 700; letter-spacing: 0.03em;
+      padding: 3px 9px 4px; border-radius: 999px;
+      border: 2px solid #7a5cff;
+      box-shadow: 0 0 16px rgba(122, 92, 255, 0.45);
+      white-space: nowrap; opacity: 0; transition: opacity 0.2s;
+    }
+    .nametag.friend::after { content: " ♥"; color: #ff7ad1; }
+    #crosshair {
+      position: fixed; left: 50%; top: 50%;
+      width: 10px; height: 10px; margin: -5px 0 0 -5px;
+      border: 2px solid rgba(255,255,255,0.8);
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(62, 224, 200, 0.6);
+      pointer-events: none; z-index: 3;
+    }
+    body.is-mobile #crosshair { display: none; }
+    #hud {
+      position: fixed;
+      top: calc(10px + var(--safe-top));
+      left: calc(10px + var(--safe-left));
+      z-index: 6;
+      background: var(--paper);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(196, 108, 255, 0.35);
+      border-radius: 14px;
+      padding: 10px 12px 11px;
+      min-width: 196px;
+      max-width: min(280px, 68vw);
+      box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+      display: none;
+    }
+    #goal { font-weight: 800; font-size: 14px; margin: 0 0 8px; }
+    .rel {
+      display: grid;
+      grid-template-columns: 14px 1fr 36px;
+      gap: 6px; align-items: center;
+      margin: 5px 0; font-size: 12px; font-weight: 600;
+    }
+    .swatch {
+      width: 12px; height: 12px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.5);
+      box-shadow: 0 0 6px currentColor;
+    }
+    .rel-name { font-size: 11px; line-height: 1.1; margin-bottom: 2px; font-weight: 700; }
+    .track { height: 8px; background: #2a1a40; border-radius: 99px; overflow: hidden; }
+    .fill { height: 100%; width: 0%; border-radius: 99px; transition: width 0.35s ease; }
+    .val { font-variant-numeric: tabular-nums; color: var(--muted); text-align: right; }
+    .rel.is-friend .val { color: var(--good); font-weight: 800; }
+    #prompt {
+      position: fixed; left: 50%;
+      bottom: calc(118px + var(--safe-bottom));
+      transform: translateX(-50%);
+      background: rgba(18, 8, 30, 0.86);
+      color: #efe7ff;
+      padding: 8px 14px; border-radius: 999px;
+      font-weight: 700; font-size: 15px;
+      border: 1px solid rgba(196, 108, 255, 0.45);
+      z-index: 6; display: none; pointer-events: none; white-space: nowrap;
+    }
+    body.is-mobile #prompt { bottom: calc(168px + var(--safe-bottom)); }
+    #talk-btn, #music-btn {
+      border: none; color: #fff; font-weight: 800;
+      letter-spacing: 0.02em;
+      touch-action: manipulation;
+    }
+    #talk-btn {
+      display: none;
+      position: fixed;
+      right: calc(18px + var(--safe-right));
+      bottom: calc(36px + var(--safe-bottom));
+      z-index: 8;
+      width: 76px; height: 76px; border-radius: 50%;
+      background: linear-gradient(180deg, #c46cff, #7a3ae0);
+      font-size: 16px;
+      box-shadow: 0 8px 24px rgba(196, 108, 255, 0.5);
+    }
+    #talk-btn.show { display: block; }
+    #talk-btn:active, #music-btn:active { transform: scale(0.96); }
+    #music-btn {
+      display: none;
+      position: fixed;
+      top: calc(10px + var(--safe-top));
+      right: calc(10px + var(--safe-right));
+      z-index: 8;
+      min-width: 52px; height: 40px; padding: 0 12px;
+      border-radius: 999px;
+      background: rgba(22, 12, 36, 0.92);
+      border: 1px solid rgba(62, 224, 200, 0.45);
+      font-size: 14px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+    }
+    body.playing #music-btn { display: block; }
+    body.talking #music-btn { display: none; }
+    #music-btn.on { border-color: #3ee0c8; color: #3ee0c8; }
+    #joystick {
+      display: none;
+      position: fixed;
+      left: calc(18px + var(--safe-left));
+      bottom: calc(24px + var(--safe-bottom));
+      width: 138px; height: 138px;
+      z-index: 8; touch-action: none;
+    }
+    body.is-mobile.playing:not(.talking) #joystick { display: block; }
+    .joy-base, .joy-knob { position: absolute; border-radius: 50%; }
+    .joy-base {
+      inset: 0;
+      background: rgba(30, 16, 50, 0.4);
+      border: 3px solid rgba(196, 108, 255, 0.5);
+      box-shadow: inset 0 0 20px rgba(122, 92, 255, 0.2);
+    }
+    .joy-knob {
+      width: 62px; height: 62px; left: 38px; top: 38px;
+      background: rgba(239, 231, 255, 0.92);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+      border: 3px solid #c46cff;
+    }
+    #start, #win {
+      position: fixed; inset: 0; z-index: 20;
+      display: flex; align-items: center; justify-content: center;
+      padding: calc(20px + var(--safe-top)) 22px calc(20px + var(--safe-bottom));
+      background: linear-gradient(180deg, rgba(10, 4, 20, 0.55), rgba(10, 4, 20, 0.78));
+    }
+    #win { display: none; }
+    .card {
+      background: linear-gradient(180deg, #241436, #160c24);
+      color: var(--ink);
+      max-width: 470px; width: 100%;
+      border-radius: 20px;
+      padding: 28px 26px 24px;
+      border: 1px solid rgba(196, 108, 255, 0.4);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(122, 92, 255, 0.2);
+      text-align: center;
+    }
+    .card h1 { margin: 0 0 8px; font-size: clamp(28px, 7vw, 38px); letter-spacing: -0.03em; }
+    .card .lead { margin: 0 0 16px; font-size: 16px; line-height: 1.45; color: var(--muted); }
+    .card ul {
+      text-align: left; margin: 0 0 20px;
+      padding: 12px 12px 12px 32px;
+      background: rgba(10, 4, 22, 0.55);
+      border-radius: 12px; line-height: 1.55; font-size: 14.5px;
+    }
+    .card li { margin: 4px 0; }
+    .go {
+      appearance: none; border: none;
+      background: linear-gradient(180deg, #c46cff, #7a3ae0);
+      color: #fff; font-weight: 800; font-size: 17px;
+      padding: 14px 22px; border-radius: 999px;
+      width: 100%; cursor: pointer; touch-action: manipulation;
+    }
+    .go:active { transform: scale(0.98); }
+    .hint { margin: 12px 0 0; font-size: 12px; color: #8b7aa8; }
+    #dialogue {
+      display: none;
+      position: fixed;
+      left: 50%;
+      bottom: calc(16px + var(--safe-bottom));
+      transform: translateX(-50%);
+      width: min(640px, calc(100% - 20px));
+      z-index: 12;
+      background: rgba(22, 12, 36, 0.96);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(196, 108, 255, 0.4);
+      border-radius: 18px;
+      padding: 16px 16px 14px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+    }
+    #dlg-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    #dlg-name { font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+    #dlg-name .swatch { width: 14px; height: 14px; }
+    #dlg-role { font-weight: 600; font-size: 12px; color: var(--muted); margin-left: 2px; }
+    #dlg-close {
+      appearance: none; border: none;
+      background: #2a1a40; color: var(--ink);
+      font-weight: 700; font-size: 13px;
+      padding: 8px 12px; border-radius: 999px;
+      cursor: pointer; touch-action: manipulation;
+    }
+    #dlg-text { font-size: 16px; line-height: 1.45; margin: 0 0 12px; text-align: left; }
+    #dlg-choices { display: flex; flex-direction: column; gap: 8px; }
+    .choice {
+      appearance: none;
+      border: 2px solid #3a2658;
+      background: #1a102c; color: var(--ink);
+      text-align: left; font-size: 16px; line-height: 1.35;
+      padding: 12px; border-radius: 12px;
+      cursor: pointer; touch-action: manipulation;
+      min-height: 44px;
+    }
+    .choice:hover, .choice:active { border-color: var(--accent); background: #2a1648; }
+    .choice b { display: inline-block; min-width: 1.4em; color: #c46cff; }
+    #paused {
+      display: none;
+      position: fixed; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 15;
+      background: rgba(18, 8, 30, 0.92);
+      color: #fff; padding: 14px 18px; border-radius: 12px;
+      font-weight: 700; text-align: center; pointer-events: none;
+      border: 1px solid rgba(196, 108, 255, 0.4);
+    }
+    @media (max-width: 600px) {
+      #hud { padding: 8px 10px 9px; min-width: 0; }
+      #goal { font-size: 13px; margin-bottom: 6px; }
+      .rel { font-size: 11px; grid-template-columns: 12px 1fr 30px; }
+      .track { height: 7px; }
+      #dlg-text { font-size: 15px; }
+      .card { padding: 22px 18px 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="view"></div>
+  <div id="labels"></div>
+  <div id="crosshair"></div>
+  <div id="hud">
+    <div id="goal">Make 3 friends · 0/3</div>
+    <div id="rels"></div>
+  </div>
+  <div id="prompt">Press E to talk</div>
+  <button id="talk-btn" type="button" aria-label="Talk">Talk</button>
+  <button id="music-btn" type="button" aria-label="Toggle music">♪ Music</button>
+  <div id="joystick" aria-hidden="true">
+    <div class="joy-base"></div>
+    <div class="joy-knob" id="joy-knob"></div>
+  </div>
+  <div id="dialogue">
+    <div id="dlg-head">
+      <div id="dlg-name"></div>
+      <button id="dlg-close" type="button">Close</button>
+    </div>
+    <p id="dlg-text"></p>
+    <div id="dlg-choices"></div>
+  </div>
+  <div id="paused">Click the lounge to keep looking around</div>
+  <div id="start">
+    <div class="card">
+      <h1>Moonveil Club</h1>
+      <p class="lead">A fantasy social lounge where the night never quite ends. Wander the dance floor, talk with the regulars, and make three friends.</p>
+      <ul id="controls-list"></ul>
+      <button class="go" id="start-btn" type="button">Click to start</button>
+      <p class="hint">A short hangout prototype — talk, dance, and linger.</p>
+    </div>
+  </div>
+  <div id="win">
+    <div class="card">
+      <h1>You made three friends!</h1>
+      <p class="lead">The lanterns seem a little warmer. Stay for another song, or keep circulating through the club.</p>
+      <button class="go" id="win-btn" type="button">Keep exploring</button>
+    </div>
+  </div>
+  <script type="module">
+    import * as THREE from 'three';
+    const $ = (id) => document.getElementById(id);
+
+    function detectMobile() {
+      const ua = navigator.userAgent || '';
+      const iOS = /iPad|iPhone|iPod/.test(ua) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const android = /Android/i.test(ua);
+      const coarse = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+      return iOS || android || coarse;
+    }
+
+    let useTouch = detectMobile();
+    if (useTouch) document.body.classList.add('is-mobile');
+
+    const FRIEND_AT = 70;
+    const TALK_RANGE = 2.85;
+    const EYE = 1.62;
+    const RADIUS = 0.38;
+    const MAX_SPEED = 4.6;
+    const ACCEL = 11;
+    const DECEL = 14;
+
+    const npcData = [
+      {
+        id: 'lyra', name: 'Lyra', role: 'Elf Bard',
+        color: 0x7dffb0, hair: 0xf4d56a, skin: 0xf0c4a0,
+        x: -6.6, z: 0.2, yaw: Math.PI * 0.5,
+        kind: 'elf', dance: false,
+        waypoints: [{ x: -6.6, z: 0.2 }, { x: -5.4, z: 1.8 }, { x: -6.2, z: -1.4 }],
+        start: 'hello',
+        nodes: {
+          hello: {
+            text: "A new face in the lantern-light — lucky evening. I'm Lyra. I keep the stage from going quiet, and the quiet from going stale. What brings you under the Moonveil?",
+            choices: [
+              { t: "The music, mostly. You play beautifully.", next: 'music', d: 18 },
+              { t: "I was hoping to meet people, not just pass through.", next: 'meet', d: 16 },
+              { t: "Just wandering. I might not stay long.", next: 'wander', d: 2 }
+            ]
+          },
+          music: {
+            text: "Flattery, but I'll allow it — my left ear is the vain one. If you have a favorite kind of song, I can steal it and make it sound like it was always mine.",
+            choices: [
+              { t: "Something soft, with a little mischief.", next: null, d: 16 },
+              { t: "Play whatever you'd play for a friend.", next: null, d: 18 }
+            ]
+          },
+          meet: {
+            text: "Then you're already doing it correctly. The club is a net for lonely hours. Come stand by the stage later; I'll introduce you with a verse if you're brave.",
+            choices: [
+              { t: "Brave enough. I'll come find you.", next: null, d: 16 },
+              { t: "A small hello is plenty — but thank you.", next: null, d: 10 }
+            ]
+          },
+          wander: {
+            text: "Wandering is a kind of listening. If the night decides you should stay, you'll hear it in the chorus. I won't chain you to a stool.",
+            choices: [
+              { t: "That's a kinder dismissal than I expected.", next: null, d: 12 },
+              { t: "I'll let the chorus decide.", next: null, d: 10 }
+            ]
+          },
+          again: {
+            text: "You came back mid-phrase. I like an audience that doesn't evaporate. Request a mood, or shall I keep improvising at you?",
+            choices: [
+              { t: "Keep improvising. I'm listening.", next: null, d: 12 },
+              { t: "Something brighter — the floor looks lonely.", next: null, d: 10 }
+            ]
+          },
+          pals: {
+            text: "There's my favorite refrain. If the club ever feels too loud, stand here; I'll play around you like a shelter.",
+            choices: [
+              { t: "That's a friendship I can hear.", next: null, d: 4 },
+              { t: "I'll always come back for the encore.", next: null, d: 4 }
+            ]
+          }
+        }
+      },
+      {
+        id: 'vesper', name: 'Vesper', role: 'Wizard',
+        color: 0x6a7dff, hair: 0xd8d0e8, skin: 0xe2b894,
+        x: 6.8, z: -3.2, yaw: -Math.PI * 0.6,
+        kind: 'wizard', dance: false,
+        waypoints: [{ x: 6.8, z: -3.2 }, { x: 5.2, z: -1.0 }, { x: 7.0, z: -5.0 }],
+        start: 'hello',
+        nodes: {
+          hello: {
+            text: "Ah. A mortal orbit I haven't catalogued. I'm Vesper — wizard, occasionally on purpose. I come here to study the most unpredictable magic: people choosing to sit together. Are you a student of that, or an accident?",
+            choices: [
+              { t: "A willing student, if you're offering notes.", next: 'student', d: 18 },
+              { t: "An accident with good timing, I hope.", next: 'accident', d: 14 },
+              { t: "I just wanted a quiet corner.", next: 'quiet', d: 4 }
+            ]
+          },
+          student: {
+            text: "Excellent. Lesson one: never drink the silver punch if it is bubbling in 7/8 time. Lesson two: if someone looks lonely near the crystals, they are usually worth a sentence. You'll do fine.",
+            choices: [
+              { t: "I'll remember both. Especially the punch.", next: null, d: 16 },
+              { t: "Any other lessons hiding in your hat?", next: null, d: 18 }
+            ]
+          },
+          accident: {
+            text: "The best gatherings are 60% accident. I arrived tonight looking for a lost rune and found a booth. If you ever need a small, harmless charm — a warmer pocket, a brighter laugh — I dabble.",
+            choices: [
+              { t: "A brighter laugh sounds useful.", next: null, d: 16 },
+              { t: "I'll take the booth and the conversation.", next: null, d: 12 }
+            ]
+          },
+          quiet: {
+            text: "Then we are allies. The booths eat sound. Sit, if you like; I can be silent in four languages, though I rarely am.",
+            choices: [
+              { t: "Silence in company is still company.", next: null, d: 14 },
+              { t: "I might ask a question later.", next: null, d: 8 }
+            ]
+          },
+          again: {
+            text: "You return, which statistically improves the evening. I was tracing sigils in the condensation. They say 'hello' if you squint.",
+            choices: [
+              { t: "Hello, then, to you and the sigils.", next: null, d: 12 },
+              { t: "I'll leave the magic and steal the booth.", next: null, d: 7 }
+            ]
+          },
+          pals: {
+            text: "Friend of the booth, friend of the wizard. If the world goes strange, come find me. I have tea that behaves, mostly.",
+            choices: [
+              { t: "I'll come for the tea and the counsel.", next: null, d: 4 },
+              { t: "Mostly is good enough for me.", next: null, d: 3 }
+            ]
+          }
+        }
+      },
+      {
+        id: 'rowan', name: 'Rowan', role: 'Knight',
+        color: 0xc0c8d8, hair: 0x3a2a22, skin: 0xc99670,
+        x: 3.4, z: 4.3, yaw: -0.4,
+        kind: 'knight', dance: false,
+        waypoints: [{ x: 3.4, z: 4.3 }, { x: 2.0, z: 5.4 }, { x: 4.8, z: 3.2 }],
+        start: 'hello',
+        nodes: {
+          hello: {
+            text: "Evening. Rowan — knight, currently off duty, currently unsure whether standing at the edge of a dance floor counts as a campaign. I don't always know the right thing to say in places this colorful.",
+            choices: [
+              { t: "Standing nearby is already a good start.", next: 'start', d: 16 },
+              { t: "You could dance. I'll pretend not to watch.", next: 'dance', d: 18 },
+              { t: "I get it. Crowds can feel like a battlefield.", next: 'battle', d: 12 }
+            ]
+          },
+          start: {
+            text: "That's generous. I spent years learning how to hold a line, not a conversation. If you have patience for rusty small talk, I can offer honesty, and possibly a story about a dragon that was mostly a rumor.",
+            choices: [
+              { t: "I'll take honesty over polish.", next: null, d: 18 },
+              { t: "I definitely want the rumor-dragon.", next: null, d: 16 }
+            ]
+          },
+          dance: {
+            text: "A daring proposal. If I step out there I may invent new ways to be armored and awkward. Still… perhaps one song, if someone kind is within shouting distance.",
+            choices: [
+              { t: "I'll be that someone. Come on.", next: null, d: 18 },
+              { t: "No pressure — the offer stands.", next: null, d: 12 }
+            ]
+          },
+          battle: {
+            text: "Exactly. At least in a fight you know which way the spears are pointing. Here the danger is saying something foolish. Thank you for not making it worse.",
+            choices: [
+              { t: "Foolish is allowed after midnight.", next: null, d: 14 },
+              { t: "You're doing better than you think.", next: null, d: 16 }
+            ]
+          },
+          again: {
+            text: "You circled back. I was practicing a nod that looks friendly rather than formal. How did I do?",
+            choices: [
+              { t: "Very friendly. The armor helps.", next: null, d: 12 },
+              { t: "We'll workshop the nod. You're fine.", next: null, d: 10 }
+            ]
+          },
+          pals: {
+            text: "It's good to have an ally in the lounge as well as in the field. If you ever need a clear path through a crowd, or a toast, I'm your knight.",
+            choices: [
+              { t: "I'll remember both offers.", next: null, d: 4 },
+              { t: "Save me a place at the edge.", next: null, d: 4 }
+            ]
+          }
+        }
+      },
+      {
+        id: 'lumi', name: 'Lumi', role: 'Fairy',
+        color: 0xff9ad8, hair: 0xfff0a8, skin: 0xffe0d0,
+        x: 0.6, z: -0.4, yaw: 0.2,
+        kind: 'fairy', dance: true,
+        waypoints: [{ x: 0.6, z: -0.4 }, { x: -1.6, z: 1.2 }, { x: 1.8, z: 1.0 }, { x: -0.8, z: -1.8 }],
+        start: 'hello',
+        nodes: {
+          hello: {
+            text: "Hi hi hi — you walked through my favorite color of light! I'm Lumi. I am supposed to be 'mingling,' which I think means dancing until someone talks to me. You count! Do you dance, or do you hover politely like a lantern?",
+            choices: [
+              { t: "I dance, especially if the company is good.", next: 'dance', d: 18 },
+              { t: "I'm more of a polite lantern, but I like this.", next: 'lantern', d: 16 },
+              { t: "It's a little bright for me.", next: 'bright', d: -4 }
+            ]
+          },
+          dance: {
+            text: "Then we are already a duet! The tiles like you — they went pink, see? If you stay till the next drop I will teach you a spin that almost never knocks over drinks.",
+            choices: [
+              { t: "Teach me. I'll risk the drinks.", next: null, d: 18 },
+              { t: "I'll spin carefully and with pride.", next: null, d: 14 }
+            ]
+          },
+          lantern: {
+            text: "Lanterns are important. The floor would be chaos without soft people at the edges. You can be my designated glow. That's a job I just invented.",
+            choices: [
+              { t: "I accept the title.", next: null, d: 16 },
+              { t: "I'll glow from slightly closer.", next: null, d: 14 }
+            ]
+          },
+          bright: {
+            text: "Oh. I can dim! Watch — no, that's just me standing in a shadow. Sorry. There are quieter crystals by the booths if the floor is too much. I still hope you don't vanish.",
+            choices: [
+              { t: "I won't vanish. Thanks for dimming.", next: null, d: 14 },
+              { t: "I'll try the crystals, then come back.", next: null, d: 10 }
+            ]
+          },
+          again: {
+            text: "You again! I saved you a tile. It is the sparkly one. They are all sparkly. I got excited.",
+            choices: [
+              { t: "I'll take the officially sparkly tile.", next: null, d: 12 },
+              { t: "I came back for you, not the tile.", next: null, d: 12 }
+            ]
+          },
+          pals: {
+            text: "Friend!! The wings do a thing when I'm happy, you can't see it from the front. Come dance whenever the night gets heavy. I'll make it light.",
+            choices: [
+              { t: "That's a deal, light-maker.", next: null, d: 4 },
+              { t: "I'll always find your tile.", next: null, d: 4 }
+            ]
+          }
+        }
+      },
+      {
+        id: 'grokk', name: 'Grokk', role: 'Orc Bartender',
+        color: 0x5aaf5a, hair: 0x2a2218, skin: 0x5a8f46,
+        x: 0.0, z: -7.15, yaw: 0,
+        kind: 'orc', dance: false,
+        waypoints: [{ x: -2.2, z: -7.15 }, { x: 0.0, z: -7.15 }, { x: 2.2, z: -7.15 }],
+        start: 'hello',
+        nodes: {
+          hello: {
+            text: "Welcome in. I'm Grokk — I keep the bar, the peace, and the good jokes that don't scare the fairies. First night under the veils? Tell me what you drink, or tell me what kind of night you're hoping for.",
+            choices: [
+              { t: "A kind night. Surprise me with a drink.", next: 'kind', d: 18 },
+              { t: "Something warm, and a little conversation.", next: 'warm', d: 16 },
+              { t: "Just looking around, thanks.", next: 'look', d: 2 }
+            ]
+          },
+          kind: {
+            text: "Starberry fizz, then — sweet, a little glowing, won't betray you tomorrow. On the house for first-timers who look like they mean well. If anyone bothers you, you come to me. This is a soft club, and I keep it that way.",
+            choices: [
+              { t: "That's exactly the welcome I needed.", next: null, d: 18 },
+              { t: "I'll drink it slowly and behave.", next: null, d: 12 }
+            ]
+          },
+          warm: {
+            text: "Honey-mead, heated on a coal-charm. Conversation I can do. I used to be a raider; now I listen better than I swing. What's your story, short version?",
+            choices: [
+              { t: "I'm here to make friends, short version.", next: null, d: 18 },
+              { t: "Still writing it. This seems like a good chapter.", next: null, d: 16 }
+            ]
+          },
+          look: {
+            text: "Look all you like. The floor is safe, the booths are softer, and the stage has Lyra, which is a blessing. If you get thirsty later, I will still be here. I am reliably here.",
+            choices: [
+              { t: "Good to know who the anchor is.", next: null, d: 12 },
+              { t: "I'll be back when I'm thirsty.", next: null, d: 8 }
+            ]
+          },
+          again: {
+            text: "There you are. I almost poured a second fizz 'in case the wanderer returned.' That's you. No charge for being predictable in a nice way.",
+            choices: [
+              { t: "Pour it. I like being that wanderer.", next: null, d: 12 },
+              { t: "You take good care of this place.", next: null, d: 12 }
+            ]
+          },
+          pals: {
+            text: "Friend of the bar is friend of Grokk. Your stool's unofficially reserved. If the night ever turns sharp, you stand here and it gets round again.",
+            choices: [
+              { t: "I'll take the unofficial stool.", next: null, d: 5 },
+              { t: "And I'll help you keep it kind.", next: null, d: 4 }
+            ]
+          }
+        }
+      }
+    ];
+
+    let audioCtx = null;
+    let ambientStarted = false;
+    let beatOn = false;
+    let beatTimer = 0;
+    let beatStep = 0;
+    let musicGain = null;
+    let kickBuf = null;
+
+    function unlockAudio() {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!audioCtx) audioCtx = new AC();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      if (!ambientStarted && audioCtx.state === 'running') startAmbient();
+    }
+
+    function startAmbient() {
+      if (!audioCtx || ambientStarted) return;
+      ambientStarted = true;
+      const master = audioCtx.createGain();
+      master.gain.value = 0.018;
+      master.connect(audioCtx.destination);
+      const make = (freq, type, detune) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        const f = audioCtx.createBiquadFilter();
+        o.type = type;
+        o.frequency.value = freq;
+        o.detune.value = detune || 0;
+        f.type = 'lowpass';
+        f.frequency.value = 520;
+        g.gain.value = 0.5;
+        o.connect(f); f.connect(g); g.connect(master);
+        o.start();
+      };
+      make(110, 'sine', 0);
+      make(164.8, 'sine', 5);
+      make(246.9, 'triangle', -3);
+    }
+
+    function ensureMusic() {
+      if (!audioCtx || musicGain) return;
+      musicGain = audioCtx.createGain();
+      musicGain.gain.value = 0;
+      musicGain.connect(audioCtx.destination);
+      // soft kick buffer
+      const sr = audioCtx.sampleRate;
+      const len = Math.floor(sr * 0.18);
+      kickBuf = audioCtx.createBuffer(1, len, sr);
+      const d = kickBuf.getChannelData(0);
+      for (let i = 0; i < len; i++) {
+        const t = i / sr;
+        d[i] = Math.sin(2 * Math.PI * (140 * Math.exp(-t * 18)) * t) * Math.exp(-t * 14);
+      }
+    }
+
+    function pulse(kind, t) {
+      if (!audioCtx || !musicGain) return;
+      const now = t || audioCtx.currentTime;
+      if (kind === 'kick') {
+        const src = audioCtx.createBufferSource();
+        src.buffer = kickBuf;
+        const g = audioCtx.createGain();
+        g.gain.value = 0.85;
+        src.connect(g); g.connect(musicGain);
+        src.start(now);
+        const o = audioCtx.createOscillator();
+        const og = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(70, now);
+        o.frequency.exponentialRampToValueAtTime(35, now + 0.12);
+        og.gain.setValueAtTime(0.35, now);
+        og.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        o.connect(og); og.connect(musicGain);
+        o.start(now); o.stop(now + 0.15);
+      } else if (kind === 'hat') {
+        const sr = audioCtx.sampleRate;
+        const len = Math.floor(sr * 0.04);
+        const buf = audioCtx.createBuffer(1, len, sr);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / len * 8);
+        const src = audioCtx.createBufferSource();
+        src.buffer = buf;
+        const f = audioCtx.createBiquadFilter();
+        f.type = 'highpass'; f.frequency.value = 7000;
+        const g = audioCtx.createGain();
+        g.gain.value = 0.12;
+        src.connect(f); f.connect(g); g.connect(musicGain);
+        src.start(now);
+      } else if (kind === 'bass') {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'triangle';
+        const notes = [55, 55, 65.41, 73.42, 55, 82.41, 73.42, 65.41];
+        o.frequency.value = notes[beatStep % notes.length];
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+        o.connect(g); g.connect(musicGain);
+        o.start(now); o.stop(now + 0.3);
+      }
+    }
+
+    function setMusic(on) {
+      unlockAudio();
+      ensureMusic();
+      beatOn = !!on;
+      if (musicGain && audioCtx) {
+        const now = audioCtx.currentTime;
+        musicGain.gain.cancelScheduledValues(now);
+        musicGain.gain.setTargetAtTime(beatOn ? 0.55 : 0, now, 0.08);
+      }
+      $('music-btn').classList.toggle('on', beatOn);
+      $('music-btn').textContent = beatOn ? '♪ On' : '♪ Music';
+    }
+    function toggleMusic() { setMusic(!beatOn); }
+
+    function blip(kind) {
+      if (!audioCtx || audioCtx.state !== 'running') return;
+      const now = audioCtx.currentTime;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sine';
+      if (kind === 'talk') {
+        o.frequency.setValueAtTime(480, now);
+        o.frequency.exponentialRampToValueAtTime(700, now + 0.08);
+      } else if (kind === 'good') {
+        o.frequency.setValueAtTime(540, now);
+        o.frequency.exponentialRampToValueAtTime(820, now + 0.1);
+      } else if (kind === 'win') {
+        o.frequency.setValueAtTime(392, now);
+        o.frequency.exponentialRampToValueAtTime(784, now + 0.28);
+      } else o.frequency.value = 360;
+      g.gain.setValueAtTime(0.05, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(now); o.stop(now + 0.2);
+    }
+
+    const controlsList = $('controls-list');
+    const startBtn = $('start-btn');
+    if (useTouch) {
+      controlsList.innerHTML = `
+        <li>Walk with the left joystick</li>
+        <li>Drag on the right side of the screen to look around</li>
+        <li>When you're close to someone, tap <b>Talk</b></li>
+        <li>Tap a reply — or Close to leave the conversation</li>
+        <li>Tap <b>♪ Music</b> for a beat (after you start)</li>`;
+      startBtn.textContent = 'Tap to start';
+    } else {
+      controlsList.innerHTML = `
+        <li>Move with <b>WASD</b> or the arrow keys</li>
+        <li>Look around with the mouse (click to lock the cursor)</li>
+        <li>Press <b>E</b> when you're near someone to talk</li>
+        <li>Choose a reply with <b>1</b>–<b>3</b> or a click · <b>Esc</b> closes a chat</li>
+        <li>Press <b>M</b> to toggle the club beat</li>`;
+      startBtn.textContent = 'Click to start';
+    }
+
+    const view = $('view');
+    const isMobilePerf = useTouch || ((window.devicePixelRatio || 1) > 1.5 && window.innerWidth < 900);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: !isMobilePerf, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x140818, 1);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = isMobilePerf ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    view.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x100814);
+    scene.fog = new THREE.FogExp2(0x1a0c28, 0.016);
+
+    const camera = new THREE.PerspectiveCamera(70, 1, 0.12, 80);
+    camera.rotation.order = 'YXZ';
+
+    function sizeView() {
+      const w = Math.max(1, window.innerWidth);
+      const h = Math.max(1, window.innerHeight);
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    sizeView();
+    window.addEventListener('resize', sizeView, { passive: true });
+    window.addEventListener('orientationchange', () => setTimeout(sizeView, 200));
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', sizeView, { passive: true });
+
+    scene.add(new THREE.HemisphereLight(0xb8a8ff, 0x4a2860, 1.05));
+    scene.add(new THREE.AmbientLight(0x6a50a0, 0.5));
+    const sun = new THREE.DirectionalLight(0xe8d8ff, 0.85);
+    sun.position.set(4, 10, 6);
+    sun.castShadow = true;
+    const mapSize = isMobilePerf ? 512 : 1024;
+    sun.shadow.mapSize.set(mapSize, mapSize);
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 28;
+    sun.shadow.camera.left = -12;
+    sun.shadow.camera.right = 12;
+    sun.shadow.camera.top = 12;
+    sun.shadow.camera.bottom = -12;
+    sun.shadow.bias = -0.001;
+    scene.add(sun);
+
+    const clubLights = [];
+    function addGlow(x, y, z, color, intensity, distance) {
+      const light = new THREE.PointLight(color, intensity, distance, 2);
+      light.position.set(x, y, z);
+      scene.add(light);
+      clubLights.push(light);
+      return light;
+    }
+    if (!isMobilePerf) {
+      addGlow(0, 3.2, 0, 0xaa66ff, 1.4, 11);
+      addGlow(-6.5, 2.8, 0, 0xff66aa, 0.85, 8);
+      addGlow(0, 2.6, -7, 0xffc56a, 1.1, 8);
+      addGlow(6.5, 2.6, -3, 0x66ddff, 0.7, 7);
+    } else {
+      addGlow(0, 3.2, 0, 0xaa66ff, 1.15, 12);
+      addGlow(0, 2.6, -7, 0xffc56a, 0.9, 9);
+    }
+    addGlow(0, 3.0, 7.2, 0xccaaff, isMobilePerf ? 0.7 : 1.0, 10);
+
+    // Soft environment so metals / skin aren't pitch-black
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envSc = new THREE.Scene();
+    envSc.background = new THREE.Color(0x4a3070);
+    envSc.add(new THREE.HemisphereLight(0xddccff, 0x5a3060, 1.6));
+    scene.environment = pmrem.fromScene(envSc, 0.04).texture;
+    pmrem.dispose();
+
+    const floorLights = [
+      addGlow(-2.2, 2.3, -2.2, 0xff4d9a, isMobilePerf ? 0.55 : 0.8, 6),
+      addGlow(2.2, 2.3, 2.2, 0x4df0ff, isMobilePerf ? 0.55 : 0.8, 6)
+    ];
+
+    const boxes = [];
+    const circles = [];
+    function addBoxCollider(minX, maxX, minZ, maxZ) { boxes.push({ minX, maxX, minZ, maxZ }); }
+    function addCircleCollider(x, z, r) { circles.push({ x, z, r }); }
+
+    function std(color, opts = {}) {
+      return new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.08, ...opts });
+    }
+    function phys(color, opts = {}) {
+      return new THREE.MeshPhysicalMaterial({ color, roughness: 0.4, metalness: 0.05, ...opts });
+    }
+    function shadow(mesh, cast = true, receive = true) {
+      mesh.castShadow = cast;
+      mesh.receiveShadow = receive;
+      return mesh;
+    }
+
+    const world = new THREE.Group();
+    scene.add(world);
+
+    // Floor
+    const floor = shadow(new THREE.Mesh(new THREE.CircleGeometry(14, 48), std(0x2a1a3a, { roughness: 0.8 })), false, true);
+    floor.rotation.x = -Math.PI / 2;
+    world.add(floor);
+
+    const wood = shadow(new THREE.Mesh(new THREE.CircleGeometry(13.2, 48), std(0x3a2848, { roughness: 0.75 })), false, true);
+    wood.rotation.x = -Math.PI / 2;
+    wood.position.y = 0.005;
+    world.add(wood);
+
+    // Walls & ceiling (architectural shells — slightly curved via many segments)
+    const wallMat = std(0x3a2048, { roughness: 0.78, metalness: 0.05 });
+    const trimMat = std(0x3a2060, { roughness: 0.5, metalness: 0.2, emissive: 0x2a1048, emissiveIntensity: 0.15 });
+    function ringWall(radius, height, y, segs = 48) {
+      const mesh = shadow(new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, segs, 1, true), wallMat), false, true);
+      mesh.position.y = y;
+      world.add(mesh);
+    }
+    ringWall(13.4, 5.6, 2.6);
+    const ceiling = shadow(new THREE.Mesh(new THREE.CircleGeometry(13.5, 48), std(0x12081c, { roughness: 0.9 })), false, false);
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.position.y = 5.35;
+    world.add(ceiling);
+    // Keep player inside
+    const ROOM_R = 12.4;
+
+    // Glow trim around the room
+    const trim = shadow(new THREE.Mesh(new THREE.TorusGeometry(13.15, 0.06, 8, 64), new THREE.MeshStandardMaterial({
+      color: 0x7a5cff, emissive: 0x7a5cff, emissiveIntensity: 0.8, roughness: 0.3, metalness: 0.4
+    })), false, false);
+    trim.rotation.x = Math.PI / 2;
+    trim.position.y = 4.15;
+    world.add(trim);
+    const trim2 = trim.clone();
+    trim2.position.y = 0.12;
+    world.add(trim2);
+
+    // Dance floor tiles
+    const danceTiles = [];
+    const tileGeo = new THREE.CylinderGeometry(0.48, 0.48, 0.06, 16);
+    const TILE_N = 7;
+    for (let iz = 0; iz < TILE_N; iz++) {
+      for (let ix = 0; ix < TILE_N; ix++) {
+        const mat = new THREE.MeshStandardMaterial({
+          color: 0x221033, emissive: 0x441166, emissiveIntensity: 0.7,
+          roughness: 0.35, metalness: 0.25
+        });
+        const tile = shadow(new THREE.Mesh(tileGeo, mat), false, true);
+        tile.position.set((ix - (TILE_N - 1) / 2) * 0.98, 0.04, (iz - (TILE_N - 1) / 2) * 0.98);
+        world.add(tile);
+        danceTiles.push({ mesh: tile, mat, ix, iz });
+      }
+    }
+    const floorRim = shadow(new THREE.Mesh(new THREE.TorusGeometry(3.7, 0.08, 8, 48), new THREE.MeshStandardMaterial({
+      color: 0x3ee0c8, emissive: 0x3ee0c8, emissiveIntensity: 0.55, roughness: 0.3, metalness: 0.4
+    })), false, true);
+    floorRim.rotation.x = Math.PI / 2;
+    floorRim.position.y = 0.06;
+    world.add(floorRim);
+
+    // Columns + crystals at dance floor corners
+    function crystalColumn(x, z, hue) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      const col = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 2.4, 16), std(0x2a1a40, { roughness: 0.4, metalness: 0.25 })));
+      col.position.y = 1.2;
+      const cap = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12), std(0x3a2060)));
+      cap.position.y = 2.45;
+      const cryst = shadow(new THREE.Mesh(new THREE.OctahedronGeometry(0.42, 2), new THREE.MeshPhysicalMaterial({
+        color: hue, emissive: hue, emissiveIntensity: 0.85,
+        roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.92,
+        transmission: isMobilePerf ? 0 : 0.35, thickness: 0.5
+      })), true, false);
+      cryst.position.y = 3.05;
+      g.add(col, cap, cryst);
+      world.add(g);
+      addCircleCollider(x, z, 0.4);
+      return cryst;
+    }
+    const crystals = [
+      crystalColumn(-4.3, -4.3, 0xff66cc),
+      crystalColumn(4.3, -4.3, 0x66f0ff),
+      crystalColumn(-4.3, 4.3, 0xc46cff),
+      crystalColumn(4.3, 4.3, 0x7dffb0)
+    ];
+
+    // Hanging lanterns
+    function lantern(x, z, color, height = 4.4) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      const cord = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.8, 8), std(0x2a2030)), false, false);
+      cord.position.y = height + 0.2;
+      const body = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), new THREE.MeshStandardMaterial({
+        color, emissive: color, emissiveIntensity: 1.1, roughness: 0.25, metalness: 0.1
+      })), false, false);
+      body.position.y = height - 0.25;
+      const bowl = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), std(0x3a2a18, { metalness: 0.4, roughness: 0.4 })), false, false);
+      bowl.position.y = height - 0.32;
+      g.add(cord, body, bowl);
+      world.add(g);
+    }
+    lantern(-7.5, 4.5, 0xffb066, 4.5);
+    lantern(7.5, 4.5, 0xff66aa, 4.5);
+    lantern(-7.5, -5.5, 0x88a0ff, 4.5);
+    lantern(7.5, -5.8, 0x66ffcc, 4.5);
+    lantern(0, 6.5, 0xe0a0ff, 4.6);
+    lantern(-3.2, -7.4, 0xffc56a, 3.8);
+    lantern(3.2, -7.4, 0xffc56a, 3.8);
+
+    // Stage (west)
+    const stage = new THREE.Group();
+    stage.position.set(-7.4, 0, 0);
+    const stagePlat = shadow(new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.7, 0.38, 32), std(0x3a2048, { roughness: 0.55, metalness: 0.15 })));
+    stagePlat.position.y = 0.19;
+    const stageRug = shadow(new THREE.Mesh(new THREE.CircleGeometry(2.15, 28), std(0x5a2060, { roughness: 0.7, emissive: 0x2a1028, emissiveIntensity: 0.2 })), false, true);
+    stageRug.rotation.x = -Math.PI / 2;
+    stageRug.position.y = 0.4;
+    const curtainMat = phys(0x6a2048, { roughness: 0.65 });
+    function curtain(sx, sz) {
+      const c = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 3.6, 16), curtainMat), true, true);
+      c.position.set(sx, 2.2, sz);
+      return c;
+    }
+    stage.add(stagePlat, stageRug, curtain(-0.2, -2.15), curtain(-0.2, 2.15));
+    const arch = shadow(new THREE.Mesh(new THREE.TorusGeometry(2.15, 0.08, 8, 24, Math.PI), new THREE.MeshStandardMaterial({
+      color: 0xf0c36a, emissive: 0xaa8844, emissiveIntensity: 0.35, metalness: 0.55, roughness: 0.35
+    })), false, true);
+    arch.rotation.z = Math.PI / 2;
+    arch.rotation.y = Math.PI / 2;
+    arch.position.set(-0.1, 2.3, 0);
+    stage.add(arch);
+    world.add(stage);
+    addCircleCollider(-7.4, 0, 2.5);
+
+    // Bar (north)
+    const bar = new THREE.Group();
+    bar.position.set(0, 0, -8.05);
+    const barTop = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 7.2, 6, 16), std(0x4a2a22, { roughness: 0.45, metalness: 0.15 })));
+    barTop.rotation.z = Math.PI / 2;
+    barTop.position.y = 1.12;
+    const barFront = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.38, 7.0, 6, 16), std(0x2a1520, { roughness: 0.6 })));
+    barFront.rotation.z = Math.PI / 2;
+    barFront.position.set(0, 0.55, 0.15);
+    const shelf = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 6.4, 4, 12), std(0x3a2a28, { metalness: 0.2 })));
+    shelf.rotation.z = Math.PI / 2;
+    shelf.position.set(0, 2.15, -0.45);
+    bar.add(barTop, barFront, shelf);
+    const bottleColors = [0xff6688, 0x66ffcc, 0xffee88, 0xaa88ff, 0x88ccff, 0xffaa66, 0xee66ff];
+    for (let i = 0; i < bottleColors.length; i++) {
+      const bx = -2.7 + i * 0.9;
+      const bottle = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.28, 6, 10), new THREE.MeshStandardMaterial({
+        color: bottleColors[i], emissive: bottleColors[i], emissiveIntensity: 0.45,
+        roughness: 0.2, metalness: 0.15, transparent: true, opacity: 0.9
+      })), true, false);
+      bottle.position.set(bx, 2.42, -0.45);
+      bar.add(bottle);
+    }
+    world.add(bar);
+    addBoxCollider(-4.2, 4.2, -8.7, -7.45);
+
+    // Back bar wall nook
+    const nook = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 8.4, 12), std(0xf0c36a, { metalness: 0.5, roughness: 0.35, emissive: 0x886622, emissiveIntensity: 0.2 })));
+    nook.rotation.z = Math.PI / 2;
+    nook.position.set(0, 3.1, -8.6);
+    world.add(nook);
+
+    // Booths / seating
+    function booth(x, z, rot, seatColor) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      g.rotation.y = rot;
+      const seat = shadow(new THREE.Mesh(new THREE.TorusGeometry(1.05, 0.28, 12, 24, Math.PI), std(seatColor, { roughness: 0.7 })));
+      seat.position.y = 0.48;
+      seat.rotation.x = Math.PI / 2;
+      const back = shadow(new THREE.Mesh(new THREE.TorusGeometry(1.05, 0.22, 10, 22, Math.PI), std(seatColor, { roughness: 0.7 })));
+      back.position.set(0, 0.95, -0.15);
+      back.rotation.y = Math.PI;
+      const table = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.08, 20), std(0x3a2a24, { roughness: 0.4, metalness: 0.15 })));
+      table.position.set(0, 0.78, 0.55);
+      const pedestal = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 0.75, 12), std(0x2a1a18)));
+      pedestal.position.set(0, 0.38, 0.55);
+      const lamp = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 10), new THREE.MeshStandardMaterial({
+        color: 0xffd19a, emissive: 0xffc56a, emissiveIntensity: 0.9
+      })), false, false);
+      lamp.position.set(0, 1.0, 0.55);
+      g.add(seat, back, table, pedestal, lamp);
+      world.add(g);
+      addCircleCollider(x, z, 1.15);
+    }
+    booth(7.2, -3.2, -Math.PI * 0.55, 0x3a2860);
+    booth(7.0, 3.6, -Math.PI * 0.75, 0x4a2040);
+    booth(-3.6, 7.2, Math.PI, 0x203a50);
+
+    // Round lounge chairs near entrance
+    function pouf(x, z, color) {
+      const p = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 12), std(color, { roughness: 0.75 })));
+      p.scale.y = 0.55;
+      p.position.set(x, 0.22, z);
+      world.add(p);
+      addCircleCollider(x, z, 0.45);
+    }
+    pouf(-3.4, 6.2, 0x6a3060);
+    pouf(-2.2, 7.0, 0x305070);
+
+    // Small side tables
+    function cocktail(x, z) {
+      const top = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.06, 16), std(0x3a2a24, { metalness: 0.25, roughness: 0.35 })));
+      top.position.set(x, 0.7, z);
+      const stem = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.7, 10), std(0x2a1a18)));
+      stem.position.set(x, 0.35, z);
+      world.add(top, stem);
+      addCircleCollider(x, z, 0.32);
+    }
+    cocktail(5.2, 5.4);
+    cocktail(-5.0, 5.6);
+
+    // ----- Characters (smooth capsules / spheres, no blocky boxes) -----
+    const capSeg = isMobilePerf ? 8 : 10;
+    const radSeg = isMobilePerf ? 12 : 16;
+    const sphSeg = isMobilePerf ? 14 : 18;
+
+    function makeHumanoid(def) {
+      const g = new THREE.Group();
+      const parts = {};
+      const skinM = std(def.skin, { roughness: 0.55, metalness: 0 });
+      const clothM = std(def.color, { roughness: 0.5, metalness: def.kind === 'knight' ? 0.42 : 0.08 });
+      const hairM = std(def.hair, { roughness: 0.6 });
+      const scale = def.kind === 'fairy' ? 0.72 : def.kind === 'orc' ? 1.18 : def.kind === 'wizard' ? 1.06 : 1;
+
+      const hip = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.17, sphSeg, sphSeg), clothM));
+      hip.position.y = 0.88;
+      g.add(hip);
+
+      const torso = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.46, capSeg, radSeg), clothM));
+      torso.position.y = 1.22;
+      g.add(torso);
+      parts.torso = torso;
+
+      const neck = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.08, 6, 10), skinM));
+      neck.position.y = 1.55;
+      g.add(neck);
+
+      const headG = new THREE.Group();
+      headG.position.y = 1.72;
+      const head = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.195, sphSeg, sphSeg), skinM));
+      headG.add(head);
+      parts.head = headG;
+
+      // hair cap
+      const hair = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.205, sphSeg, 12, 0, Math.PI * 2, 0, Math.PI * 0.58), hairM));
+      hair.position.y = 0.04;
+      hair.rotation.x = -0.15;
+      headG.add(hair);
+
+      // eyes
+      const eyeM = std(0x1a1a22, { roughness: 0.3 });
+      const le = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 8), eyeM), false, false);
+      le.position.set(-0.07, 0.02, 0.16);
+      const re = le.clone();
+      re.position.x = 0.07;
+      headG.add(le, re);
+      g.add(headG);
+
+      function limb(radius, length, mat, px, py, pz) {
+        const pivot = new THREE.Group();
+        pivot.position.set(px, py, pz);
+        const mesh = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(radius, length, capSeg, radSeg), mat));
+        mesh.position.y = -length / 2 - radius * 0.2;
+        pivot.add(mesh);
+        g.add(pivot);
+        return pivot;
+      }
+      const legMat = def.kind === 'knight' ? std(0xc8d0dc, { metalness: 0.45, roughness: 0.35 }) : std(0x2a2030, { roughness: 0.65 });
+      parts.lLeg = limb(0.075, 0.52, legMat, -0.1, 0.86, 0);
+      parts.rLeg = limb(0.075, 0.52, legMat, 0.1, 0.86, 0);
+      parts.lArm = limb(0.055, 0.46, clothM, -0.30, 1.42, 0);
+      parts.rArm = limb(0.055, 0.46, clothM, 0.30, 1.42, 0);
+      parts.lArm.rotation.z = 0.18;
+      parts.rArm.rotation.z = -0.18;
+
+      // Kind-specific silhouettes
+      if (def.kind === 'elf') {
+        const earM = skinM;
+        const earGeo = new THREE.SphereGeometry(0.09, 12, 10);
+        const lEar = shadow(new THREE.Mesh(earGeo, earM), true, false);
+        lEar.position.set(-0.16, 0.04, 0.02);
+        lEar.scale.set(0.45, 1.35, 0.35);
+        lEar.rotation.z = 0.55;
+        lEar.rotation.y = 0.2;
+        const rEar = lEar.clone();
+        rEar.position.x = 0.16;
+        rEar.rotation.z = -0.55;
+        rEar.rotation.y = -0.2;
+        headG.add(lEar, rEar);
+        const braid = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.45, 6, 10), hairM));
+        braid.position.set(0.16, -0.22, -0.06);
+        braid.rotation.z = -0.4;
+        headG.add(braid);
+        // lute
+        const lute = new THREE.Group();
+        const body = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 12), std(0x8a4a28, { roughness: 0.45 })));
+        body.scale.set(1, 0.45, 1.15);
+        const neckL = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.03, 0.32, 6, 8), std(0x6a3a1a)));
+        neckL.position.set(0, 0, 0.28);
+        neckL.rotation.x = Math.PI / 2;
+        lute.add(body, neckL);
+        lute.position.set(0.28, -0.28, 0.18);
+        lute.rotation.x = 0.5;
+        parts.rArm.add(lute);
+        parts.prop = lute;
+      }
+
+      if (def.kind === 'wizard') {
+        const brim = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.45), std(0x2a2460, { roughness: 0.5 })));
+        brim.position.y = 0.12;
+        brim.scale.y = 0.25;
+        const cone = shadow(new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.62, 16, 4), std(0x2a2460, { roughness: 0.5 })));
+        cone.position.y = 0.46;
+        const band = shadow(new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.025, 8, 16), std(0xf0c36a, { metalness: 0.6, roughness: 0.3, emissive: 0xaa8844, emissiveIntensity: 0.3 })), false, false);
+        band.rotation.x = Math.PI / 2;
+        band.position.y = 0.2;
+        headG.add(brim, cone, band);
+        const beard = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), std(0xd8d0e8, { roughness: 0.75 })));
+        beard.position.set(0, -0.16, 0.1);
+        beard.scale.set(0.85, 1.15, 0.7);
+        headG.add(beard);
+        const robe = shadow(new THREE.Mesh(new THREE.ConeGeometry(0.48, 1.25, 20, 1, true), phys(0x2a2468, { roughness: 0.6, side: THREE.DoubleSide })));
+        robe.position.y = 0.85;
+        g.add(robe);
+        parts.robe = robe;
+        const staff = new THREE.Group();
+        const shaft = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.03, 1.35, 6, 8), std(0x6a4a28, { roughness: 0.5 })));
+        const orb = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.1, 14, 12), new THREE.MeshStandardMaterial({
+          color: 0x88aaff, emissive: 0x4466ff, emissiveIntensity: 1.1, roughness: 0.2
+        })), false, false);
+        orb.position.y = 0.78;
+        staff.add(shaft, orb);
+        staff.position.set(0.12, -0.55, 0.12);
+        parts.rArm.add(staff);
+        parts.staffOrb = orb;
+        parts.rArm.rotation.z = -0.08;
+        parts.rArm.rotation.x = 0.15;
+      }
+
+      if (def.kind === 'knight') {
+        const helm = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.22, sphSeg, 14, 0, Math.PI * 2, 0, Math.PI * 0.72), std(0xd0d8e4, { metalness: 0.5, roughness: 0.32 })));
+        helm.position.y = 0.04;
+        const visor = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8), std(0x1a2030, { metalness: 0.4, roughness: 0.3 })), false, false);
+        visor.position.set(0, 0.02, 0.14);
+        visor.scale.set(1.15, 0.35, 0.5);
+        const plume = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), std(0xc45c4a, { roughness: 0.7 })));
+        plume.position.set(0, 0.28, -0.02);
+        plume.scale.set(0.5, 1.4, 0.5);
+        headG.add(helm, visor, plume);
+        const pauldronL = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 10), std(0xd4dce8, { metalness: 0.5, roughness: 0.32 })));
+        pauldronL.position.set(-0.30, 1.46, 0);
+        pauldronL.scale.set(1.1, 0.7, 1);
+        const pauldronR = pauldronL.clone();
+        pauldronR.position.x = 0.30;
+        const chest = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.26, 14, 12), std(0xd8e0ec, { metalness: 0.48, roughness: 0.32 })));
+        chest.position.y = 1.26;
+        chest.scale.set(0.95, 1.05, 0.7);
+        g.add(pauldronL, pauldronR, chest);
+        const shield = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 12), std(0x6a7aaa, { metalness: 0.7, roughness: 0.35, emissive: 0x223344, emissiveIntensity: 0.15 })));
+        shield.scale.set(0.15, 1, 0.8);
+        shield.position.set(-0.12, -0.2, 0.12);
+        parts.lArm.add(shield);
+      }
+
+      if (def.kind === 'fairy') {
+        const bun = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), hairM));
+        bun.position.set(0, 0.16, -0.02);
+        headG.add(bun);
+        const wingM = new THREE.MeshPhysicalMaterial({
+          color: 0xffd6f0, emissive: 0xff88cc, emissiveIntensity: 1.1,
+          transparent: true, opacity: 0.82, roughness: 0.2, metalness: 0,
+          side: THREE.DoubleSide
+        });
+        const wingGeo = new THREE.SphereGeometry(0.34, 16, 12);
+        const lWing = shadow(new THREE.Mesh(wingGeo, wingM), false, false);
+        lWing.position.set(-0.28, 1.32, -0.1);
+        lWing.scale.set(0.55, 1.15, 0.28);
+        lWing.rotation.y = 0.65;
+        const rWing = lWing.clone();
+        rWing.position.x = 0.2;
+        rWing.rotation.y = -0.4;
+        g.add(lWing, rWing);
+        parts.lWing = lWing;
+        parts.rWing = rWing;
+        const glow = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), new THREE.MeshStandardMaterial({
+          color: 0xffcc66, emissive: 0xffaa44, emissiveIntensity: 0.8, transparent: true, opacity: 0.7
+        })), false, false);
+        glow.position.y = 1.1;
+        g.add(glow);
+        parts.glow = glow;
+        parts.lArm.rotation.z = 0.5;
+        parts.rArm.rotation.z = -0.5;
+      }
+
+      if (def.kind === 'orc') {
+        head.scale.set(1.15, 0.95, 1.1);
+        const brow = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), skinM));
+        brow.position.set(0, 0.1, 0.14);
+        brow.scale.set(1.8, 0.4, 0.5);
+        const jaw = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), skinM));
+        jaw.position.set(0, -0.1, 0.1);
+        jaw.scale.set(1.15, 0.7, 0.9);
+        const tuskM = std(0xf4efe4, { roughness: 0.4 });
+        const lt = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), tuskM));
+        lt.position.set(-0.07, -0.12, 0.18);
+        lt.scale.set(0.6, 1.6, 0.6);
+        lt.rotation.x = -0.5;
+        const rt = lt.clone();
+        rt.position.x = 0.07;
+        headG.add(brow, jaw, lt, rt);
+        const apron = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 12), std(0xefe6d4, { roughness: 0.7 })));
+        apron.position.set(0, 1.05, 0.12);
+        apron.scale.set(0.85, 1.15, 0.35);
+        g.add(apron);
+        // mug
+        const mug = new THREE.Group();
+        const cup = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 10), std(0x8a4a28, { roughness: 0.5 })));
+        cup.scale.y = 1.15;
+        const foam = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), std(0xf4efe0)), false, false);
+        foam.position.y = 0.07;
+        mug.add(cup, foam);
+        mug.position.set(0.08, -0.35, 0.14);
+        parts.rArm.add(mug);
+      }
+
+      g.scale.setScalar(scale);
+      return { group: g, parts };
+    }
+
+    const npcs = [];
+    const labelsRoot = $('labels');
+    const relsEl = $('rels');
+
+    npcData.forEach((def, i) => {
+      const { group, parts } = makeHumanoid(def);
+      group.position.set(def.x, 0, def.z);
+      group.rotation.y = def.yaw;
+      scene.add(group);
+      addCircleCollider(def.x, def.z, def.kind === 'orc' ? 0.62 : def.kind === 'fairy' ? 0.4 : 0.5);
+      const tag = document.createElement('div');
+      tag.className = 'nametag';
+      tag.textContent = def.name;
+      tag.style.borderColor = '#' + def.color.toString(16).padStart(6, '0');
+      labelsRoot.appendChild(tag);
+      const row = document.createElement('div');
+      row.className = 'rel';
+      const hex = '#' + def.color.toString(16).padStart(6, '0');
+      row.innerHTML = `<span class="swatch" style="background:${hex};color:${hex}"></span>
+        <div><div class="rel-name">${def.name}</div>
+        <div class="track"><div class="fill" style="background:${hex};width:40%"></div></div></div>
+        <span class="val">40</span>`;
+      relsEl.appendChild(row);
+      npcs.push({
+        ...def, mesh: group, parts, tag, row,
+        fill: row.querySelector('.fill'),
+        val: row.querySelector('.val'),
+        friendship: 40, talked: false, friend: false,
+        baseYaw: def.yaw, phase: i * 1.15,
+        colIndex: circles.length - 1,
+        wp: 0, walkT: 0, walkPhase: 0,
+        paused: 0, moving: false,
+        yaw: def.yaw
+      });
+    });
+
+    const player = { x: 0, z: 8.6, yaw: 0, pitch: -0.06, vx: 0, vz: 0, bob: 0 };
+    let yawGoal = 0, pitchGoal = -0.06;
+    const keys = Object.create(null);
+    const joy = { active: false, id: null, x: 0, y: 0 };
+    let lookId = null, lookLastX = 0, lookLastY = 0;
+    let playing = false, talking = false, locked = false, won = false;
+    let nearNpc = null, dlgNpc = null, dlgChoices = [];
+    const lookSensDesk = 0.0022;
+    const lookSensTouch = 0.0034;
+    const LOOK_SMOOTH = 16;
+
+    function applyPose(dt) {
+      const k = 1 - Math.exp(-LOOK_SMOOTH * (dt || 1 / 60));
+      player.yaw += (yawGoal - player.yaw) * k;
+      player.pitch += (pitchGoal - player.pitch) * k;
+      const spd = Math.hypot(player.vx, player.vz);
+      if (playing && !talking && spd > 0.25) player.bob += (dt || 0.016) * 9.5 * Math.min(1.4, spd / 2.5);
+      const bob = Math.sin(player.bob) * 0.045 * Math.min(1, spd / MAX_SPEED);
+      camera.position.set(player.x, EYE + bob, player.z);
+      camera.rotation.y = player.yaw;
+      camera.rotation.x = player.pitch;
+    }
+    applyPose(1);
+
+    function clampPitchGoal() {
+      const lim = Math.PI / 2 - 0.12;
+      if (pitchGoal > lim) pitchGoal = lim;
+      if (pitchGoal < -lim) pitchGoal = -lim;
+    }
+    function lookBy(dx, dy, sens) {
+      yawGoal -= dx * sens;
+      pitchGoal -= dy * sens;
+      clampPitchGoal();
+    }
+
+    window.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+      if (!playing) return;
+      if (e.code === 'KeyM') { toggleMusic(); return; }
+      if (talking) {
+        if (e.code === 'Escape') { closeDialogue(); e.preventDefault(); }
+        if (e.code === 'Digit1' || e.code === 'Numpad1') pickChoice(0);
+        if (e.code === 'Digit2' || e.code === 'Numpad2') pickChoice(1);
+        if (e.code === 'Digit3' || e.code === 'Numpad3') pickChoice(2);
+        return;
+      }
+      if (e.code === 'KeyE') tryTalk();
+    });
+    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+    document.addEventListener('mousemove', (e) => {
+      if (playing && locked && !talking && !useTouch) lookBy(e.movementX, e.movementY, lookSensDesk);
+    });
+    renderer.domElement.addEventListener('click', () => {
+      if (!playing || talking || useTouch) return;
+      if (!locked) requestLock();
+    });
+
+    function requestLock() {
+      const el = renderer.domElement;
+      const req = el.requestPointerLock || el.mozRequestPointerLock || el.webkitRequestPointerLock;
+      if (req) req.call(el);
+    }
+    function exitLock() {
+      const ex = document.exitPointerLock || document.mozExitPointerLock || document.webkitExitPointerLock;
+      if (ex) ex.call(document);
+    }
+    function onLockChange() {
+      const el = document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement;
+      locked = el === renderer.domElement;
+      if (playing && !talking && !useTouch) $('paused').style.display = locked ? 'none' : 'block';
+      else $('paused').style.display = 'none';
+    }
+    document.addEventListener('pointerlockchange', onLockChange);
+    document.addEventListener('mozpointerlockchange', onLockChange);
+    document.addEventListener('webkitpointerlockchange', onLockChange);
+
+    const joyEl = $('joystick');
+    const knobEl = $('joy-knob');
+    const JOY_R = 40;
+    function joyOffset(touch) {
+      const r = joyEl.getBoundingClientRect();
+      return { x: touch.clientX - (r.left + r.width / 2), y: touch.clientY - (r.top + r.height / 2) };
+    }
+    function setKnob(x, y) {
+      const l = Math.hypot(x, y);
+      const m = Math.min(l, JOY_R);
+      const nx = l > 0 ? (x / l) * m : 0;
+      const ny = l > 0 ? (y / l) * m : 0;
+      knobEl.style.transform = `translate(${nx}px, ${ny}px)`;
+      joy.x = l > 8 ? nx / JOY_R : 0;
+      joy.y = l > 8 ? ny / JOY_R : 0;
+    }
+    function resetJoy() {
+      joy.active = false; joy.id = null; joy.x = 0; joy.y = 0;
+      knobEl.style.transform = 'translate(0,0)';
+    }
+    function isUiTouchTarget(t) {
+      if (!t || !t.closest) return false;
+      return !!(t.closest('#talk-btn') || t.closest('#music-btn') || t.closest('#dialogue') || t.closest('#start') || t.closest('#win') || t.closest('button'));
+    }
+    function onTouchStart(e) {
+      if (!playing || talking) return;
+      for (const t of e.changedTouches) {
+        if (isUiTouchTarget(t.target)) continue;
+        const r = joyEl.getBoundingClientRect();
+        const inJoy = useTouch && t.clientX >= r.left - 30 && t.clientX <= r.right + 30 &&
+          t.clientY >= r.top - 30 && t.clientY <= r.bottom + 30;
+        const leftSide = t.clientX < window.innerWidth * 0.42 && t.clientY > window.innerHeight * 0.45;
+        if (useTouch && !joy.active && (inJoy || leftSide)) {
+          joy.active = true; joy.id = t.identifier;
+          setKnob(joyOffset(t).x, joyOffset(t).y);
+        } else if (lookId === null) {
+          lookId = t.identifier; lookLastX = t.clientX; lookLastY = t.clientY;
+        }
+      }
+      if (e.cancelable) e.preventDefault();
+    }
+    function onTouchMove(e) {
+      if (!playing || talking) return;
+      for (const t of e.changedTouches) {
+        if (joy.active && t.identifier === joy.id) setKnob(joyOffset(t).x, joyOffset(t).y);
+        else if (t.identifier === lookId) {
+          lookBy(t.clientX - lookLastX, t.clientY - lookLastY, lookSensTouch);
+          lookLastX = t.clientX; lookLastY = t.clientY;
+        }
+      }
+      if (e.cancelable) e.preventDefault();
+    }
+    function onTouchEnd(e) {
+      for (const t of e.changedTouches) {
+        if (t.identifier === joy.id) resetJoy();
+        if (t.identifier === lookId) lookId = null;
+      }
+    }
+    const touchOpts = { passive: false };
+    document.addEventListener('touchstart', onTouchStart, touchOpts);
+    document.addEventListener('touchmove', onTouchMove, touchOpts);
+    document.addEventListener('touchend', onTouchEnd, touchOpts);
+    document.addEventListener('touchcancel', onTouchEnd, touchOpts);
+    document.addEventListener('gesturestart', (e) => e.preventDefault());
+    document.addEventListener('gesturechange', (e) => e.preventDefault());
+    window.addEventListener('touchstart', () => {
+      if (useTouch) return;
+      useTouch = true;
+      document.body.classList.add('is-mobile');
+      if (locked) exitLock();
+    }, { passive: true });
+
+    function resolve(x, z) {
+      const d0 = Math.hypot(x, z);
+      if (d0 > ROOM_R) {
+        x = (x / d0) * ROOM_R;
+        z = (z / d0) * ROOM_R;
+      }
+      for (const c of boxes) {
+        const minX = c.minX - RADIUS, maxX = c.maxX + RADIUS;
+        const minZ = c.minZ - RADIUS, maxZ = c.maxZ + RADIUS;
+        if (x > minX && x < maxX && z > minZ && z < maxZ) {
+          const left = x - minX, right = maxX - x, top = z - minZ, bot = maxZ - z;
+          const m = Math.min(left, right, top, bot);
+          if (m === left) x = minX;
+          else if (m === right) x = maxX;
+          else if (m === top) z = minZ;
+          else z = maxZ;
+        }
+      }
+      for (const c of circles) {
+        if (c.r <= 0.01) continue;
+        const dx = x - c.x, dz = z - c.z;
+        const min = c.r + RADIUS;
+        const d2 = dx * dx + dz * dz;
+        if (d2 < min * min && d2 > 1e-8) {
+          const d = Math.sqrt(d2);
+          x = c.x + (dx / d) * min;
+          z = c.z + (dz / d) * min;
+        }
+      }
+      return { x, z };
+    }
+
+    function movePlayer(dt) {
+      let ix = 0, iz = 0;
+      if (useTouch && (joy.x || joy.y)) { ix = joy.x; iz = joy.y; }
+      else {
+        if (keys.KeyW || keys.ArrowUp) iz -= 1;
+        if (keys.KeyS || keys.ArrowDown) iz += 1;
+        if (keys.KeyA || keys.ArrowLeft) ix -= 1;
+        if (keys.KeyD || keys.ArrowRight) ix += 1;
+      }
+      const len = Math.hypot(ix, iz);
+      if (len > 1) { ix /= len; iz /= len; }
+      const mag = useTouch && len > 0 ? Math.min(1, Math.hypot(joy.x, joy.y)) : (len > 0 ? 1 : 0);
+      const s = Math.sin(player.yaw), c = Math.cos(player.yaw);
+      const wishX = (ix * c + iz * s) * MAX_SPEED * mag;
+      const wishZ = (-ix * s + iz * c) * MAX_SPEED * mag;
+      const rate = mag > 0.05 ? ACCEL : DECEL;
+      const k = 1 - Math.exp(-rate * dt);
+      player.vx += (wishX - player.vx) * k;
+      player.vz += (wishZ - player.vz) * k;
+      if (Math.abs(player.vx) < 0.01) player.vx = 0;
+      if (Math.abs(player.vz) < 0.01) player.vz = 0;
+      const r = resolve(player.x + player.vx * dt, player.z + player.vz * dt);
+      player.x = r.x; player.z = r.z;
+    }
+
+    function nearestNpc() {
+      let best = null, bestD = TALK_RANGE;
+      for (const n of npcs) {
+        const d = Math.hypot(n.mesh.position.x - player.x, n.mesh.position.z - player.z);
+        if (d < bestD) { bestD = d; best = n; }
+      }
+      return best;
+    }
+    function updateHudGoal() {
+      const n = npcs.filter((p) => p.friend).length;
+      $('goal').textContent = `Make 3 friends · ${n}/3`;
+    }
+    function setFriendship(npc, delta) {
+      npc.friendship = Math.max(0, Math.min(100, npc.friendship + delta));
+      npc.fill.style.width = npc.friendship + '%';
+      npc.val.textContent = String(Math.round(npc.friendship));
+      const nowFriend = npc.friendship >= FRIEND_AT;
+      if (nowFriend && !npc.friend) {
+        npc.friend = true;
+        npc.row.classList.add('is-friend');
+        npc.tag.classList.add('friend');
+        updateHudGoal();
+        checkWin();
+      } else if (!nowFriend && npc.friend) {
+        npc.friend = false;
+        npc.row.classList.remove('is-friend');
+        npc.tag.classList.remove('friend');
+        updateHudGoal();
+      }
+    }
+    function checkWin() {
+      if (won) return;
+      if (npcs.filter((p) => p.friend).length >= 3) {
+        won = true;
+        blip('win');
+        closeDialogue();
+        $('win').style.display = 'flex';
+        document.body.classList.remove('talking');
+        if (locked) exitLock();
+      }
+    }
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+    function openNode(npc, key) {
+      const node = npc.nodes[key];
+      if (!node) { closeDialogue(); return; }
+      const hex = '#' + npc.color.toString(16).padStart(6, '0');
+      $('dlg-name').innerHTML = `<span class="swatch" style="background:${hex}"></span>${npc.name} <span id="dlg-role">${npc.role}</span>`;
+      $('dlg-text').textContent = node.text;
+      const box = $('dlg-choices');
+      box.innerHTML = '';
+      dlgChoices = node.choices || [];
+      dlgChoices.forEach((ch, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'choice';
+        b.innerHTML = `<b>${i + 1}</b> ${escapeHtml(ch.t)}`;
+        b.addEventListener('click', () => pickChoice(i));
+        box.appendChild(b);
+      });
+    }
+    function tryTalk() {
+      if (!playing || talking || !nearNpc) return;
+      unlockAudio();
+      blip('talk');
+      dlgNpc = nearNpc;
+      talking = true;
+      document.body.classList.add('talking');
+      $('dialogue').style.display = 'block';
+      $('prompt').style.display = 'none';
+      $('talk-btn').classList.remove('show');
+      $('paused').style.display = 'none';
+      if (locked) exitLock();
+      resetJoy();
+      const key = dlgNpc.friend ? 'pals' : (dlgNpc.talked ? 'again' : dlgNpc.start);
+      openNode(dlgNpc, key);
+    }
+    function pickChoice(i) {
+      if (!talking || !dlgNpc || !dlgChoices[i]) return;
+      const ch = dlgChoices[i];
+      const who = dlgNpc;
+      setFriendship(who, ch.d);
+      blip(ch.d >= 10 ? 'good' : 'ok');
+      if (won || !talking) { who.talked = true; return; }
+      if (ch.next) openNode(who, ch.next);
+      else { who.talked = true; closeDialogue(); }
+    }
+    function closeDialogue() {
+      if (!talking) return;
+      talking = false;
+      dlgNpc = null;
+      dlgChoices = [];
+      document.body.classList.remove('talking');
+      $('dialogue').style.display = 'none';
+      if (playing && !useTouch && $('win').style.display !== 'flex') requestLock();
+    }
+    $('dlg-close').addEventListener('click', () => { unlockAudio(); closeDialogue(); });
+    $('talk-btn').addEventListener('click', (e) => { e.preventDefault(); tryTalk(); });
+    $('music-btn').addEventListener('click', (e) => { e.preventDefault(); toggleMusic(); });
+
+    function startGame() {
+      unlockAudio();
+      playing = true;
+      document.body.classList.add('playing');
+      $('start').style.display = 'none';
+      $('hud').style.display = 'block';
+      if (!useTouch) requestLock();
+    }
+    $('start-btn').addEventListener('click', startGame);
+    $('start-btn').addEventListener('touchend', (e) => { e.preventDefault(); startGame(); }, { passive: false });
+    $('win-btn').addEventListener('click', () => {
+      $('win').style.display = 'none';
+      if (playing && !useTouch && !talking) requestLock();
+    });
+
+    const _v = new THREE.Vector3();
+    function updateLabels() {
+      const w = window.innerWidth, h = window.innerHeight;
+      for (const n of npcs) {
+        const hgt = n.kind === 'fairy' ? 1.7 : n.kind === 'orc' ? 2.55 : 2.15;
+        _v.set(n.mesh.position.x, hgt, n.mesh.position.z);
+        _v.project(camera);
+        const vis = _v.z > -1 && _v.z < 1 && _v.x > -1.15 && _v.x < 1.15 && _v.y > -1.15 && _v.y < 1.15;
+        const dist = Math.hypot(n.mesh.position.x - player.x, n.mesh.position.z - player.z);
+        if (!vis || dist > 16 || talking) { n.tag.style.opacity = '0'; continue; }
+        const x = (_v.x * 0.5 + 0.5) * w;
+        const y = (-_v.y * 0.5 + 0.5) * h;
+        n.tag.style.opacity = dist < 11 ? '1' : String(Math.max(0, 1 - (dist - 11) / 5));
+        n.tag.style.transform = `translate(-50%, -120%) translate(${x}px, ${y}px)`;
+      }
+    }
+    function updatePrompt() {
+      nearNpc = (!playing || talking) ? null : nearestNpc();
+      if (nearNpc && !talking) {
+        if (useTouch) {
+          $('prompt').style.display = 'none';
+          $('talk-btn').classList.add('show');
+        } else {
+          $('prompt').style.display = 'block';
+          $('prompt').textContent = `Press E to talk to ${nearNpc.name}`;
+          $('talk-btn').classList.remove('show');
+        }
+      } else {
+        $('prompt').style.display = 'none';
+        $('talk-btn').classList.remove('show');
+      }
+    }
+
+    function lerpAng(a, b, t) {
+      let d = b - a;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      return a + d * t;
+    }
+
+    function animateNpcs(dt, t) {
+      for (const n of npcs) {
+        const p = n.parts;
+        const dist = Math.hypot(n.mesh.position.x - player.x, n.mesh.position.z - player.z);
+        const close = dist < 4.4;
+        const talkingTo = talking && dlgNpc === n;
+
+        // waypoint walking
+        const wps = n.waypoints || [];
+        if (!talkingTo && !close && wps.length > 1) {
+          if (n.paused > 0) n.paused -= dt;
+          else {
+            const target = wps[n.wp % wps.length];
+            const dx = target.x - n.mesh.position.x;
+            const dz = target.z - n.mesh.position.z;
+            const d = Math.hypot(dx, dz);
+            if (d < 0.12) {
+              n.wp = (n.wp + 1) % wps.length;
+              n.paused = 1.2 + (n.phase % 1);
+              n.moving = false;
+            } else {
+              n.moving = true;
+              const speed = n.kind === 'fairy' ? 1.25 : n.kind === 'orc' ? 0.85 : 1.0;
+              const step = Math.min(d, speed * dt);
+              n.mesh.position.x += (dx / d) * step;
+              n.mesh.position.z += (dz / d) * step;
+              n.yaw = lerpAng(n.yaw, Math.atan2(dx, dz), 1 - Math.exp(-6 * dt));
+              n.walkPhase += dt * 8 * speed;
+            }
+          }
+        } else {
+          n.moving = false;
+          n.paused = Math.max(n.paused, 0.4);
+        }
+
+        if (close || talkingTo) {
+          const tx = player.x - n.mesh.position.x;
+          const tz = player.z - n.mesh.position.z;
+          n.yaw = lerpAng(n.yaw, Math.atan2(tx, tz), 1 - Math.exp(-7 * dt));
+        }
+        n.mesh.rotation.y = n.yaw;
+
+        const breath = Math.sin(t * 1.6 + n.phase) * 0.015;
+        if (p.torso) p.torso.scale.y = 1 + breath * 1.2;
+        const hover = n.kind === 'fairy' ? 0.22 + Math.sin(t * 2.4 + n.phase) * 0.06 : 0;
+        const bounce = n.dance || n.kind === 'fairy'
+          ? Math.abs(Math.sin(t * (beatOn ? 5.8 : 4.2) + n.phase)) * 0.1
+          : (n.moving ? Math.abs(Math.sin(n.walkPhase)) * 0.04 : 0);
+        n.mesh.position.y = hover + bounce + (n.moving ? 0 : breath * 0.4);
+
+        const swing = n.moving ? Math.sin(n.walkPhase) * 0.55 : Math.sin(t * 1.4 + n.phase) * 0.08;
+        const armIdle = Math.sin(t * 1.5 + n.phase) * 0.12;
+        if (p.lLeg && p.rLeg) {
+          p.lLeg.rotation.x = n.moving ? swing : (n.dance ? Math.sin(t * 5) * 0.25 : 0.04);
+          p.rLeg.rotation.x = n.moving ? -swing : (n.dance ? Math.sin(t * 5 + 1) * 0.25 : 0.04);
+        }
+        if (p.lArm && p.rArm) {
+          if (n.dance || n.kind === 'fairy') {
+            const beat = beatOn ? 6.2 : 4.4;
+            p.lArm.rotation.x = Math.sin(t * beat + n.phase) * 0.7 - 0.4;
+            p.rArm.rotation.x = Math.sin(t * beat + n.phase + 1.2) * 0.7 - 0.4;
+            p.lArm.rotation.z = 0.55 + Math.sin(t * 3 + n.phase) * 0.2;
+            p.rArm.rotation.z = -0.55 - Math.sin(t * 3 + 1) * 0.2;
+          } else if (n.moving) {
+            p.lArm.rotation.x = -swing * 0.7;
+            p.rArm.rotation.x = swing * 0.7;
+          } else {
+            p.lArm.rotation.x = armIdle;
+            p.rArm.rotation.x = n.kind === 'wizard' ? 0.2 + armIdle * 0.3 : -armIdle;
+          }
+        }
+        if (p.lWing && p.rWing) {
+          const flap = Math.sin(t * 14 + n.phase) * 0.35;
+          p.lWing.rotation.z = 0.25 + flap;
+          p.rWing.rotation.z = -0.25 - flap;
+        }
+        if (p.staffOrb) p.staffOrb.material.emissiveIntensity = 0.8 + Math.sin(t * 3 + n.phase) * 0.4;
+        if (p.head) p.head.rotation.y = close ? 0 : Math.sin(t * 0.6 + n.phase) * 0.15;
+
+        circles[n.colIndex].x = n.mesh.position.x;
+        circles[n.colIndex].z = n.mesh.position.z;
+      }
+    }
+
+    const clock = new THREE.Clock();
+    function tick() {
+      requestAnimationFrame(tick);
+      const dt = Math.min(0.05, clock.getDelta());
+      const t = clock.elapsedTime;
+
+      // dance floor + lights
+      for (const tile of danceTiles) {
+        const wave = t * 0.35 + tile.ix * 0.22 + tile.iz * 0.18;
+        const hue = (wave * 0.15) % 1;
+        const pulse = 0.22 + 0.2 * (0.5 + 0.5 * Math.sin(t * (beatOn ? 5.8 : 2.2) + tile.ix + tile.iz));
+        tile.mat.emissive.setHSL(hue, 0.85, pulse);
+        tile.mat.color.setHSL(hue, 0.65, 0.16);
+      }
+      floorLights.forEach((l, i) => {
+        const hue = (t * 0.12 + i * 0.5) % 1;
+        l.color.setHSL(hue, 0.8, 0.55);
+        l.intensity = (isMobilePerf ? 0.5 : 0.75) + Math.sin(t * 2 + i) * 0.15;
+      });
+      crystals.forEach((c, i) => {
+        c.rotation.y = t * 0.4 + i;
+        c.position.y = 3.05 + Math.sin(t * 1.6 + i) * 0.08;
+      });
+
+      if (beatOn && audioCtx) {
+        beatTimer += dt;
+        const stepTime = 0.5 / 2; // 8ths at 120bpm? 0.25s = 8th at 120bpm
+        const eighth = 60 / 118 / 2;
+        while (beatTimer >= eighth) {
+          beatTimer -= eighth;
+          const now = audioCtx.currentTime;
+          if (beatStep % 2 === 0) pulse('kick', now);
+          pulse('hat', now);
+          if (beatStep % 2 === 0) pulse('bass', now);
+          beatStep++;
+        }
+      }
+
+      if (playing && !talking && $('win').style.display !== 'flex') movePlayer(dt);
+      else { player.vx *= Math.max(0, 1 - dt * 8); player.vz *= Math.max(0, 1 - dt * 8); }
+      applyPose(dt);
+      animateNpcs(dt, t);
+      updateLabels();
+      updatePrompt();
+      renderer.render(scene, camera);
+    }
+    tick();
+
+    document.addEventListener('visibilitychange', () => {
+      if (!audioCtx) return;
+      if (document.hidden && audioCtx.state === 'running') audioCtx.suspend();
+    });
+
+    window.__GAME = {
+      start() { startGame(); if (locked) exitLock(); },
+      useTouch() { return useTouch; },
+      setTouch(v) {
+        useTouch = !!v;
+        document.body.classList.toggle('is-mobile', useTouch);
+      },
+      hideOverlays() {
+        $('start').style.display = 'none';
+        $('win').style.display = 'none';
+        $('paused').style.display = 'none';
+        $('dialogue').style.display = 'none';
+        $('hud').style.display = 'block';
+        playing = true;
+        talking = false;
+        document.body.classList.add('playing');
+        document.body.classList.remove('talking');
+      },
+      setView(x, z, yaw, pitch) {
+        player.x = x; player.z = z; player.vx = 0; player.vz = 0;
+        if (yaw != null) { player.yaw = yaw; yawGoal = yaw; }
+        if (pitch != null) { player.pitch = pitch; pitchGoal = pitch; }
+        applyPose(1);
+      },
+      getNpcs: () => npcs.map((n) => ({ name: n.name, role: n.role, friendship: n.friendship, x: n.mesh.position.x, z: n.mesh.position.z })),
+      errors: []
+    };
+    window.addEventListener('error', (e) => { window.__GAME.errors.push(String(e.message || e)); });
+    window.addEventListener('unhandledrejection', (e) => { window.__GAME.errors.push(String(e.reason || e)); });
+  </script>
+</body>
+</html>
