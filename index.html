@@ -48,6 +48,8 @@
       position: fixed; inset: 0; width: 100%; height: 100%; display: block;
     }
     #view { z-index: 0; }
+    #view canvas { z-index: 0; }
+    body.in-menu #view, body.in-menu #view canvas { pointer-events: none; }
     #labels { z-index: 2; pointer-events: none; overflow: hidden; }
     .nametag {
       position: absolute; left: 0; top: 0;
@@ -256,6 +258,96 @@
       font-weight: 700; text-align: center; pointer-events: none;
       border: 1px solid rgba(196, 108, 255, 0.4);
     }
+    #fps {
+      display: none;
+      position: fixed; top: calc(10px + var(--safe-top)); left: 50%;
+      transform: translateX(-50%);
+      z-index: 9; font-size: 12px; font-weight: 700;
+      color: #efe7ff; background: rgba(12, 6, 22, 0.55);
+      padding: 4px 8px; border-radius: 999px; pointer-events: none;
+    }
+    body.show-fps #fps { display: block; }
+    #pause-btn {
+      display: none;
+      position: fixed;
+      top: calc(58px + var(--safe-top));
+      right: calc(10px + var(--safe-right));
+      z-index: 8; min-width: 52px; height: 40px; padding: 0 12px;
+      border-radius: 999px; background: rgba(22, 12, 36, 0.92);
+      border: 1px solid rgba(196, 108, 255, 0.45); color: var(--ink);
+      font-weight: 700; touch-action: manipulation;
+    }
+    body.is-mobile.playing:not(.talking):not(.in-menu) #pause-btn { display: block; }
+    #toast {
+      position: fixed; left: 50%; bottom: calc(24px + var(--safe-bottom));
+      transform: translateX(-50%) translateY(8px);
+      background: rgba(22, 12, 36, 0.94); color: var(--ink);
+      border: 1px solid rgba(62, 224, 200, 0.45);
+      padding: 10px 16px; border-radius: 999px; z-index: 40;
+      opacity: 0; pointer-events: none; transition: opacity .3s ease, transform .3s ease;
+      font-weight: 700;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #menus {
+      position: fixed; inset: 0; z-index: 30;
+      pointer-events: none;
+    }
+    .panel {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      padding: calc(18px + var(--safe-top)) 16px calc(18px + var(--safe-bottom));
+      background: linear-gradient(180deg, rgba(10, 4, 20, 0.42), rgba(10, 4, 20, 0.78));
+      opacity: 0; visibility: hidden; pointer-events: none;
+      transform: translateY(14px) scale(0.985);
+    }
+    .panel.show {
+      opacity: 1; visibility: visible; pointer-events: auto;
+      transform: none;
+    }
+    .menu-card { text-align: left; max-height: min(88vh, 720px); overflow: auto; }
+    .menu-card h1, .menu-card .lead { text-align: center; }
+    .menu-actions { display: flex; flex-direction: column; gap: 8px; }
+    .ghost, .mini {
+      appearance: none; cursor: pointer; touch-action: manipulation;
+      border-radius: 999px; font-weight: 700;
+    }
+    .ghost {
+      background: transparent; color: var(--ink);
+      border: 1px solid rgba(196, 108, 255, 0.55);
+      padding: 12px 16px; font-size: 16px; width: 100%;
+    }
+    .ghost:active, .mini:active, .go:active { transform: scale(0.98); }
+    .mini {
+      background: #2a1a40; color: var(--ink); border: 1px solid #3a2658;
+      padding: 8px 12px; font-size: 13px;
+    }
+    .field { display: block; margin: 10px 0 4px; font-size: 13px; color: var(--muted); text-align: left; }
+    .menu-card input[type="text"], .menu-card input[type="password"], .menu-card input[type="email"], .menu-card select {
+      width: 100%; padding: 12px 14px; border-radius: 12px;
+      border: 1px solid #3a2658; background: #120818; color: var(--ink); font-size: 16px;
+    }
+    .form-error { color: #ff8aa8; font-size: 13px; min-height: 1.1em; margin: 6px 0; }
+    .who { text-align: center; color: var(--good); font-size: 13px; margin: 0 0 10px; }
+    .seg { display: flex; gap: 8px; }
+    .seg button { flex: 1; }
+    .seg button.on { border-color: #fff; background: #3a2060; }
+    .swatches { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
+    .swatch-btn {
+      width: 28px; height: 28px; border-radius: 50%; padding: 0;
+      border: 2px solid transparent; cursor: pointer;
+    }
+    .swatch-btn.on { border-color: #fff; box-shadow: 0 0 0 2px #c46cff; }
+    .slider { width: 100%; accent-color: #c46cff; }
+    .check { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 14px; }
+    #char-preview {
+      width: min(200px, 64vw); height: 168px; margin: 0 auto 6px;
+      border-radius: 16px; overflow: hidden;
+      background: radial-gradient(circle at 50% 30%, #3a2068, #120818 70%);
+      border: 1px solid rgba(196, 108, 255, 0.35);
+    }
+    #char-preview canvas { width: 100% !important; height: 100% !important; display: block; }
+    body.is-mobile .desk-only { display: none; }
+    body.in-menu #hud, body.in-menu #prompt, body.in-menu #talk-btn { display: none !important; }
     @media (max-width: 600px) {
       #hud { padding: 8px 10px 9px; min-width: 0; }
       #goal { font-size: 13px; margin-bottom: 6px; }
@@ -266,7 +358,7 @@
     }
   </style>
 </head>
-<body>
+<body class="in-menu">
   <div id="view"></div>
   <div id="labels"></div>
   <div id="crosshair"></div>
@@ -290,14 +382,163 @@
     <div id="dlg-choices"></div>
   </div>
   <div id="paused">Click the lounge to keep looking around</div>
-  <div id="start">
-    <div class="card">
-      <h1>Moonveil Club</h1>
-      <p class="lead">A fantasy social lounge where the night never quite ends. Wander the dance floor, talk with the regulars, and make three friends.</p>
-      <ul id="controls-list"></ul>
-      <button class="go" id="start-btn" type="button">Click to start</button>
-      <p class="hint">A short hangout prototype — talk, dance, and linger.</p>
-    </div>
+  <div id="fps">60 fps</div>
+  <button id="pause-btn" type="button">Pause</button>
+  <div id="toast" role="status"></div>
+  <div id="menus">
+    <section class="panel show" data-screen="title" id="menu-title">
+      <div class="card menu-card">
+        <h1>Moonveil Club</h1>
+        <p class="lead">A fantasy lounge where the night never quite ends. Make three friends.</p>
+        <p class="who" id="who-line"></p>
+        <div class="menu-actions">
+          <button class="go" id="btn-new" type="button">New Game</button>
+          <button class="ghost" id="btn-continue" type="button" hidden>Continue</button>
+          <button class="ghost" id="btn-signin" type="button">Sign In</button>
+          <button class="ghost" id="btn-settings" type="button">Settings</button>
+          <button class="ghost" id="btn-credits" type="button">Credits</button>
+          <button class="ghost" id="btn-quit" type="button">Quit</button>
+        </div>
+        <p class="hint" id="title-hint"></p>
+      </div>
+    </section>
+    <section class="panel" data-screen="account" id="menu-account">
+      <div class="card menu-card">
+        <h1>Your name at the door</h1>
+        <p class="lead">Create an account, sign in, or slip in as a guest. Then you'll choose who you are tonight.</p>
+        <label class="field" for="acct-user">Username</label>
+        <input id="acct-user" type="text" autocomplete="username" maxlength="24" />
+        <label class="field" for="acct-pass">Password</label>
+        <input id="acct-pass" type="password" autocomplete="new-password" />
+        <label class="field" for="acct-pass2">Confirm password</label>
+        <input id="acct-pass2" type="password" autocomplete="new-password" />
+        <label class="field" for="acct-email">Email (optional)</label>
+        <input id="acct-email" type="email" autocomplete="email" />
+        <p class="form-error" id="acct-error"></p>
+        <div class="menu-actions">
+          <button class="go" id="btn-acct-create" type="button">Create account</button>
+          <button class="ghost" id="btn-acct-signin" type="button">Sign in instead</button>
+          <button class="ghost" id="btn-acct-skip" type="button">Skip for now</button>
+          <button class="mini" id="btn-acct-back" type="button">Back</button>
+        </div>
+      </div>
+    </section>
+    <section class="panel" data-screen="signin" id="menu-signin">
+      <div class="card menu-card">
+        <h1>Sign in</h1>
+        <p class="lead">Welcome back under the veils.</p>
+        <label class="field" for="signin-user">Username</label>
+        <input id="signin-user" type="text" autocomplete="username" maxlength="24" />
+        <label class="field" for="signin-pass">Password</label>
+        <input id="signin-pass" type="password" autocomplete="current-password" />
+        <p class="form-error" id="signin-error"></p>
+        <div class="menu-actions">
+          <button class="go" id="btn-signin-go" type="button">Sign in</button>
+          <button class="ghost" id="btn-signin-back" type="button">Back</button>
+        </div>
+      </div>
+    </section>
+    <section class="panel" data-screen="create" id="menu-create">
+      <div class="card menu-card">
+        <h1>Who walks in?</h1>
+        <p class="lead">Male or female. The preview turns so you can see the whole figure.</p>
+        <div id="char-preview"></div>
+        <label class="field" for="char-name">Name</label>
+        <input id="char-name" type="text" maxlength="24" placeholder="What should they call you?" />
+        <span class="field">Body</span>
+        <div class="seg" id="gender-seg">
+          <button type="button" class="ghost on" id="btn-gender-f" data-gender="female">Female</button>
+          <button type="button" class="ghost" id="btn-gender-m" data-gender="male">Male</button>
+        </div>
+        <span class="field">Skin tone</span>
+        <div class="swatches" id="skin-swatches"></div>
+        <span class="field">Hair style</span>
+        <div class="seg" id="hair-seg">
+          <button type="button" class="ghost on" data-hair="short">Short</button>
+          <button type="button" class="ghost" data-hair="tied">Tied</button>
+          <button type="button" class="ghost" data-hair="long">Long</button>
+        </div>
+        <span class="field">Hair color</span>
+        <div class="swatches" id="hair-swatches"></div>
+        <span class="field">Outfit color</span>
+        <div class="swatches" id="outfit-swatches"></div>
+        <p class="form-error" id="char-error"></p>
+        <div class="menu-actions">
+          <button class="go" id="btn-char-confirm" type="button">Enter the club</button>
+          <button class="mini" id="btn-char-back" type="button">Back</button>
+        </div>
+      </div>
+    </section>
+    <section class="panel" data-screen="settings" id="menu-settings">
+      <div class="card menu-card">
+        <h1>Settings</h1>
+        <label class="field" for="set-scale">Render scale <span id="set-scale-val">100%</span></label>
+        <input class="slider" id="set-scale" type="range" min="50" max="100" step="5" value="100" />
+        <label class="field" for="set-dpr">Device pixel ratio cap <span id="set-dpr-val">1.5</span></label>
+        <input class="slider" id="set-dpr" type="range" min="1" max="2" step="0.25" value="1.5" />
+        <div class="desk-only">
+          <label class="field" for="set-res">Resolution</label>
+          <select id="set-res">
+            <option value="native">Display size</option>
+            <option value="1280x720">1280 × 720</option>
+            <option value="1600x900">1600 × 900</option>
+            <option value="1920x1080">1920 × 1080</option>
+          </select>
+        </div>
+        <label class="field" for="set-quality">Graphics</label>
+        <select id="set-quality">
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+        <label class="check"><input id="set-shadows" type="checkbox" checked /> Shadows</label>
+        <label class="field" for="set-fov">Field of view <span id="set-fov-val">70</span></label>
+        <input class="slider" id="set-fov" type="range" min="55" max="100" step="1" value="70" />
+        <label class="field" for="set-mouse">Mouse look <span id="set-mouse-val">100%</span></label>
+        <input class="slider" id="set-mouse" type="range" min="40" max="200" step="5" value="100" />
+        <label class="field" for="set-touch">Touch look <span id="set-touch-val">100%</span></label>
+        <input class="slider" id="set-touch" type="range" min="40" max="200" step="5" value="100" />
+        <label class="check"><input id="set-invert" type="checkbox" /> Invert Y</label>
+        <label class="field" for="set-master">Master volume <span id="set-master-val">100%</span></label>
+        <input class="slider" id="set-master" type="range" min="0" max="100" step="1" value="100" />
+        <label class="field" for="set-music">Music <span id="set-music-val">100%</span></label>
+        <input class="slider" id="set-music" type="range" min="0" max="100" step="1" value="100" />
+        <label class="field" for="set-sfx">Effects <span id="set-sfx-val">100%</span></label>
+        <input class="slider" id="set-sfx" type="range" min="0" max="100" step="1" value="100" />
+        <label class="check"><input id="set-fps" type="checkbox" /> FPS counter</label>
+        <div class="menu-actions">
+          <button class="ghost" id="btn-fullscreen" type="button">Fullscreen</button>
+          <button class="go" id="btn-settings-back" type="button">Done</button>
+        </div>
+      </div>
+    </section>
+    <section class="panel" data-screen="credits" id="menu-credits">
+      <div class="card menu-card">
+        <h1>Credits</h1>
+        <p class="lead">Moonveil Club is a small social prototype. The regulars, and the bodies you can wear, are KayKit Adventurers by Kay Lousberg, dedicated to the public domain under CC0 1.0. Ears, lute, wings, tusks, and the recolors are part of this game.</p>
+        <p class="lead">Accounts and saves stay in this browser. There is no server yet. The sign-in code is a small local adapter so a Firebase or Supabase one can replace it later.</p>
+        <button class="go" id="btn-credits-back" type="button">Back</button>
+      </div>
+    </section>
+    <section class="panel" data-screen="pause" id="menu-pause">
+      <div class="card menu-card">
+        <h1>Paused</h1>
+        <p class="lead">The music can wait.</p>
+        <div class="menu-actions">
+          <button class="go" id="pause-resume" type="button">Resume</button>
+          <button class="ghost" id="pause-save" type="button">Save</button>
+          <button class="ghost" id="pause-settings" type="button">Settings</button>
+          <button class="ghost" id="pause-main" type="button">Main Menu</button>
+        </div>
+      </div>
+    </section>
+    <section class="panel" data-screen="quit" id="menu-quit">
+      <div class="card menu-card">
+        <h1>The veils close</h1>
+        <p class="lead">Come back whenever the night feels long. This page stays open — browsers won't let a site shut its own tab.</p>
+        <button class="go" id="btn-quit-back" type="button">Return to title</button>
+      </div>
+    </section>
   </div>
   <div id="win">
     <div class="card">
@@ -309,6 +550,7 @@
   <script type="module">
     import * as THREE from 'three';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
     const $ = (id) => document.getElementById(id);
 
     function detectMobile() {
@@ -322,6 +564,25 @@
 
     let useTouch = detectMobile();
     if (useTouch) document.body.classList.add('is-mobile');
+
+    const SETTINGS_KEY = 'moonveil.settings.v1';
+    const DEFAULT_SETTINGS = {
+      renderScale: 1, dprCap: 1.5, resolution: 'native', quality: 'high',
+      shadows: true, fov: 70, mouseSens: 1, touchSens: 1, invertY: false,
+      master: 1, music: 1, sfx: 1, showFps: false
+    };
+    function loadSettings() {
+      try {
+        const raw = localStorage.getItem(SETTINGS_KEY);
+        if (!raw) return { ...DEFAULT_SETTINGS };
+        const parsed = JSON.parse(raw);
+        return { ...DEFAULT_SETTINGS, ...parsed };
+      } catch (err) {
+        return { ...DEFAULT_SETTINGS };
+      }
+    }
+    let settings = loadSettings();
+    if (useTouch && settings.quality === 'high') settings.quality = 'medium';
 
     const FRIEND_AT = 70;
     const TALK_RANGE = 2.85;
@@ -341,7 +602,7 @@
         start: 'hello',
         nodes: {
           hello: {
-            text: "A new face in the lantern-light — lucky evening. I'm Lyra. I keep the stage from going quiet, and the quiet from going stale. What brings you under the Moonveil?",
+            text: "A new face in the lantern-light — lucky evening. I'm Lyra. I keep the stage from going quiet, and the quiet from going stale. What brings you under the Moonveil, {name}?",
             choices: [
               { t: "The music, mostly. You play beautifully.", next: 'music', d: 18 },
               { t: "I was hoping to meet people, not just pass through.", next: 'meet', d: 16 },
@@ -394,7 +655,7 @@
         start: 'hello',
         nodes: {
           hello: {
-            text: "Ah. A mortal orbit I haven't catalogued. I'm Vesper — wizard, occasionally on purpose. I come here to study the most unpredictable magic: people choosing to sit together. Are you a student of that, or an accident?",
+            text: "Ah. A mortal orbit I haven't catalogued. I'm Vesper — wizard, occasionally on purpose. I come here to study the most unpredictable magic: people choosing to sit together. Are you a student of that, or an accident, {name}?",
             choices: [
               { t: "A willing student, if you're offering notes.", next: 'student', d: 18 },
               { t: "An accident with good timing, I hope.", next: 'accident', d: 14 },
@@ -447,7 +708,7 @@
         start: 'hello',
         nodes: {
           hello: {
-            text: "Evening. Rowan — knight, currently off duty, currently unsure whether standing at the edge of a dance floor counts as a campaign. I don't always know the right thing to say in places this colorful.",
+            text: "Evening, {name}. Rowan — knight, currently off duty, currently unsure whether standing at the edge of a dance floor counts as a campaign. I don't always know the right thing to say in places this colorful.",
             choices: [
               { t: "Standing nearby is already a good start.", next: 'start', d: 16 },
               { t: "You could dance. I'll pretend not to watch.", next: 'dance', d: 18 },
@@ -500,7 +761,7 @@
         start: 'hello',
         nodes: {
           hello: {
-            text: "Hi hi hi — you walked through my favorite color of light! I'm Lumi. I am supposed to be 'mingling,' which I think means dancing until someone talks to me. You count! Do you dance, or do you hover politely like a lantern?",
+            text: "Hi hi hi, {name} — you walked through my favorite color of light! I'm Lumi. I am supposed to be 'mingling,' which I think means dancing until someone talks to me. You count! Do you dance, or do you hover politely like a lantern?",
             choices: [
               { t: "I dance, especially if the company is good.", next: 'dance', d: 18 },
               { t: "I'm more of a polite lantern, but I like this.", next: 'lantern', d: 16 },
@@ -553,7 +814,7 @@
         start: 'hello',
         nodes: {
           hello: {
-            text: "Welcome in. I'm Grokk — I keep the bar, the peace, and the good jokes that don't scare the fairies. First night under the veils? Tell me what you drink, or tell me what kind of night you're hoping for.",
+            text: "Welcome in, {name}. I'm Grokk — I keep the bar, the peace, and the good jokes that don't scare the fairies. First night under the veils? Tell me what you drink, or tell me what kind of night you're hoping for.",
             choices: [
               { t: "A kind night. Surprise me with a drink.", next: 'kind', d: 18 },
               { t: "Something warm, and a little conversation.", next: 'warm', d: 16 },
@@ -606,6 +867,23 @@
     let beatStep = 0;
     let musicGain = null;
     let kickBuf = null;
+    let audioBus = null;
+    let sfxBus = null;
+
+    function ensureBus() {
+      if (!audioCtx) return null;
+      if (!audioBus) {
+        audioBus = audioCtx.createGain();
+        audioBus.connect(audioCtx.destination);
+      }
+      audioBus.gain.value = settings.master;
+      if (!sfxBus) {
+        sfxBus = audioCtx.createGain();
+        sfxBus.connect(audioBus);
+      }
+      sfxBus.gain.value = settings.sfx;
+      return audioBus;
+    }
 
     function unlockAudio() {
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -619,8 +897,8 @@
       if (!audioCtx || ambientStarted) return;
       ambientStarted = true;
       const master = audioCtx.createGain();
-      master.gain.value = 0.018;
-      master.connect(audioCtx.destination);
+      master.gain.value = 0.018 * settings.music;
+      master.connect(ensureBus());
       const make = (freq, type, detune) => {
         const o = audioCtx.createOscillator();
         const g = audioCtx.createGain();
@@ -643,7 +921,7 @@
       if (!audioCtx || musicGain) return;
       musicGain = audioCtx.createGain();
       musicGain.gain.value = 0;
-      musicGain.connect(audioCtx.destination);
+      musicGain.connect(ensureBus());
       // soft kick buffer
       const sr = audioCtx.sampleRate;
       const len = Math.floor(sr * 0.18);
@@ -709,7 +987,7 @@
       if (musicGain && audioCtx) {
         const now = audioCtx.currentTime;
         musicGain.gain.cancelScheduledValues(now);
-        musicGain.gain.setTargetAtTime(beatOn ? 0.55 : 0, now, 0.08);
+        musicGain.gain.setTargetAtTime(beatOn ? 0.55 * settings.music : 0, now, 0.08);
       }
       $('music-btn').classList.toggle('on', beatOn);
       $('music-btn').textContent = beatOn ? '♪ On' : '♪ Music';
@@ -732,37 +1010,21 @@
         o.frequency.setValueAtTime(392, now);
         o.frequency.exponentialRampToValueAtTime(784, now + 0.28);
       } else o.frequency.value = 360;
-      g.gain.setValueAtTime(0.05, now);
+      g.gain.setValueAtTime(0.05 * settings.sfx, now);
       g.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-      o.connect(g); g.connect(audioCtx.destination);
+      o.connect(g); g.connect(ensureBus() || audioCtx.destination);
       o.start(now); o.stop(now + 0.2);
     }
 
-    const controlsList = $('controls-list');
-    const startBtn = $('start-btn');
-    if (useTouch) {
-      controlsList.innerHTML = `
-        <li>Walk with the left joystick</li>
-        <li>Drag on the right side of the screen to look around</li>
-        <li>When you're close to someone, tap <b>Talk</b></li>
-        <li>Tap a reply — or Close to leave the conversation</li>
-        <li>Tap <b>♪ Music</b> for a beat (after you start)</li>`;
-      startBtn.textContent = 'Tap to start';
-    } else {
-      controlsList.innerHTML = `
-        <li>Move with <b>WASD</b> or the arrow keys</li>
-        <li>Look around with the mouse (click to lock the cursor)</li>
-        <li>Press <b>E</b> when you're near someone to talk</li>
-        <li>Choose a reply with <b>1</b>–<b>3</b> or a click · <b>Esc</b> closes a chat</li>
-        <li>Press <b>M</b> to toggle the club beat</li>`;
-      startBtn.textContent = 'Click to start';
-    }
+    $('title-hint').textContent = useTouch
+      ? 'Walk with the left joystick. Drag the right side to look. Tap Talk when you are close. V is third person on a keyboard.'
+      : 'WASD to move, mouse to look, E to talk, Esc to pause, V for third person, M for music.';
 
     const view = $('view');
     const isMobilePerf = useTouch || ((window.devicePixelRatio || 1) > 1.5 && window.innerWidth < 900);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: !isMobilePerf, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const renderer = new THREE.WebGLRenderer({ antialias: settings.quality === 'high' && !useTouch, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, settings.dprCap) * settings.renderScale);
     renderer.setClearColor(0x140818, 1);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
@@ -775,14 +1037,28 @@
     scene.background = new THREE.Color(0x100814);
     scene.fog = new THREE.FogExp2(0x1a0c28, 0.016);
 
-    const camera = new THREE.PerspectiveCamera(70, 1, 0.12, 80);
+    const camera = new THREE.PerspectiveCamera(settings.fov, 1, 0.12, 80);
     camera.rotation.order = 'YXZ';
 
     function sizeView() {
-      const w = Math.max(1, window.innerWidth);
-      const h = Math.max(1, window.innerHeight);
-      renderer.setSize(w, h, false);
-      camera.aspect = w / h;
+      const cssW = Math.max(1, window.innerWidth);
+      const cssH = Math.max(1, window.innerHeight);
+      let bw = cssW, bh = cssH;
+      if (!useTouch && settings.resolution !== 'native') {
+        const parts = settings.resolution.split('x').map(Number);
+        if (parts[0] && parts[1]) {
+          const fit = Math.min(1, cssW / parts[0], cssH / parts[1]);
+          bw = Math.max(1, Math.round(parts[0] * fit));
+          bh = Math.max(1, Math.round(parts[1] * fit));
+        }
+      }
+      const pr = Math.max(0.5, Math.min(settings.dprCap, window.devicePixelRatio || 1) * settings.renderScale);
+      renderer.setPixelRatio(pr);
+      renderer.setSize(bw, bh, false);
+      renderer.domElement.style.width = '100%';
+      renderer.domElement.style.height = '100%';
+      camera.aspect = bw / bh;
+      camera.fov = settings.fov;
       camera.updateProjectionMatrix();
     }
     sizeView();
@@ -807,23 +1083,25 @@
     scene.add(sun);
 
     const clubLights = [];
-    function addGlow(x, y, z, color, intensity, distance) {
+    function addGlow(x, y, z, color, intensity, distance, tier) {
       const light = new THREE.PointLight(color, intensity, distance, 2);
       light.position.set(x, y, z);
+      light.userData.tier = tier || 'always';
+      light.userData.base = intensity;
       scene.add(light);
       clubLights.push(light);
       return light;
     }
     if (!isMobilePerf) {
-      addGlow(0, 3.2, 0, 0xaa66ff, 1.4, 11);
-      addGlow(-6.5, 2.8, 0, 0xff66aa, 0.85, 8);
-      addGlow(0, 2.6, -7, 0xffc56a, 1.1, 8);
-      addGlow(6.5, 2.6, -3, 0x66ddff, 0.7, 7);
+      addGlow(0, 3.2, 0, 0xaa66ff, 1.4, 11, 'always');
+      addGlow(-6.5, 2.8, 0, 0xff66aa, 0.85, 8, 'high');
+      addGlow(0, 2.6, -7, 0xffc56a, 1.1, 8, 'medium');
+      addGlow(6.5, 2.6, -3, 0x66ddff, 0.7, 7, 'high');
     } else {
-      addGlow(0, 3.2, 0, 0xaa66ff, 1.15, 12);
-      addGlow(0, 2.6, -7, 0xffc56a, 0.9, 9);
+      addGlow(0, 3.2, 0, 0xaa66ff, 1.15, 12, 'always');
+      addGlow(0, 2.6, -7, 0xffc56a, 0.9, 9, 'medium');
     }
-    addGlow(0, 3.0, 7.2, 0xccaaff, isMobilePerf ? 0.7 : 1.0, 10);
+    addGlow(0, 3.0, 7.2, 0xccaaff, isMobilePerf ? 0.7 : 1.0, 10, 'always');
 
     // Soft environment so metals / skin aren't pitch-black
     const pmrem = new THREE.PMREMGenerator(renderer);
@@ -834,8 +1112,8 @@
     pmrem.dispose();
 
     const floorLights = [
-      addGlow(-2.2, 2.3, -2.2, 0xff4d9a, isMobilePerf ? 0.55 : 0.8, 6),
-      addGlow(2.2, 2.3, 2.2, 0x4df0ff, isMobilePerf ? 0.55 : 0.8, 6)
+      addGlow(-2.2, 2.3, -2.2, 0xff4d9a, isMobilePerf ? 0.55 : 0.8, 6, 'medium'),
+      addGlow(2.2, 2.3, 2.2, 0x4df0ff, isMobilePerf ? 0.55 : 0.8, 6, 'medium')
     ];
 
     const boxes = [];
@@ -1317,6 +1595,24 @@
 
 
     const player = { x: 0, z: 8.6, yaw: 0, pitch: -0.06, vx: 0, vz: 0, bob: 0 };
+    const playerAnchor = new THREE.Group();
+    scene.add(playerAnchor);
+    const footShadow = new THREE.Mesh(
+      new THREE.CircleGeometry(0.42, 20),
+      new THREE.MeshBasicMaterial({ color: 0x050208, transparent: true, opacity: 0.45, depthWrite: false })
+    );
+    footShadow.rotation.x = -Math.PI / 2;
+    footShadow.position.y = 0.03;
+    footShadow.visible = false;
+    playerAnchor.add(footShadow);
+    let thirdPerson = false;
+    let menu = 'title';
+    let avatar = { name: 'Traveler', gender: 'female', skin: 0xf0c4a0, hairStyle: 'short', hairColor: 0x6b3a22, outfit: 0x2a6a4a };
+    let playerModel = null;
+    let playerMixer = null;
+    let playerActions = null;
+    let playerAnim = 'idle';
+    let saveTimer = 0;
     let yawGoal = 0, pitchGoal = -0.06;
     const keys = Object.create(null);
     const joy = { active: false, id: null, x: 0, y: 0 };
@@ -1334,9 +1630,29 @@
       const spd = Math.hypot(player.vx, player.vz);
       if (playing && !talking && spd > 0.25) player.bob += (dt || 0.016) * 9.5 * Math.min(1.4, spd / 2.5);
       const bob = Math.sin(player.bob) * 0.045 * Math.min(1, spd / MAX_SPEED);
-      camera.position.set(player.x, EYE + bob, player.z);
-      camera.rotation.y = player.yaw;
-      camera.rotation.x = player.pitch;
+      playerAnchor.position.set(player.x, 0, player.z);
+      playerAnchor.rotation.y = player.yaw + Math.PI;
+      footShadow.visible = !!playerModel;
+      if (thirdPerson && playerModel) {
+        const dist = 3.15;
+        camera.position.set(
+          player.x + Math.sin(player.yaw) * dist,
+          EYE + 0.35 + bob,
+          player.z + Math.cos(player.yaw) * dist
+        );
+        camera.lookAt(player.x, 1.25, player.z);
+        playerModel.visible = true;
+        setFirstPersonHide(false);
+      } else {
+        camera.position.set(player.x, EYE + bob, player.z);
+        camera.rotation.order = 'YXZ';
+        camera.rotation.y = player.yaw;
+        camera.rotation.x = player.pitch;
+        if (playerModel) {
+          playerModel.visible = true;
+          setFirstPersonHide(player.pitch < 0.72);
+        }
+      }
     }
     applyPose(1);
 
@@ -1347,17 +1663,27 @@
     }
     function lookBy(dx, dy, sens) {
       yawGoal -= dx * sens;
-      pitchGoal -= dy * sens;
+      const ySign = settings.invertY ? -1 : 1;
+      pitchGoal -= dy * sens * ySign;
       clampPitchGoal();
     }
 
     window.addEventListener('keydown', (e) => {
+      const typing = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT');
+      if (typing) return;
       keys[e.code] = true;
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
-      if (!playing) return;
+      if (e.code === 'Escape') {
+        if (talking) { closeDialogue(); e.preventDefault(); return; }
+        if (menu === 'play') { openMenu('pause'); e.preventDefault(); return; }
+        if (menu === 'pause') { resumeGame(); e.preventDefault(); return; }
+        if (menu !== 'title') { openMenu(menu === 'settings' ? settingsReturn : 'title'); e.preventDefault(); }
+        return;
+      }
+      if (menu !== 'play') return;
       if (e.code === 'KeyM') { toggleMusic(); return; }
+      if (e.code === 'KeyV' && !talking) { thirdPerson = !thirdPerson; return; }
       if (talking) {
-        if (e.code === 'Escape') { closeDialogue(); e.preventDefault(); }
         if (e.code === 'Digit1' || e.code === 'Numpad1') pickChoice(0);
         if (e.code === 'Digit2' || e.code === 'Numpad2') pickChoice(1);
         if (e.code === 'Digit3' || e.code === 'Numpad3') pickChoice(2);
@@ -1368,7 +1694,7 @@
     window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
     document.addEventListener('mousemove', (e) => {
-      if (playing && locked && !talking && !useTouch) lookBy(e.movementX, e.movementY, lookSensDesk);
+      if (playing && menu === 'play' && locked && !talking && !useTouch) lookBy(e.movementX, e.movementY, lookSensDesk * settings.mouseSens);
     });
     renderer.domElement.addEventListener('click', () => {
       if (!playing || talking || useTouch) return;
@@ -1387,7 +1713,7 @@
     function onLockChange() {
       const el = document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement;
       locked = el === renderer.domElement;
-      if (playing && !talking && !useTouch) $('paused').style.display = locked ? 'none' : 'block';
+      if (playing && menu === 'play' && !talking && !useTouch) $('paused').style.display = locked ? 'none' : 'block';
       else $('paused').style.display = 'none';
     }
     document.addEventListener('pointerlockchange', onLockChange);
@@ -1416,7 +1742,7 @@
     }
     function isUiTouchTarget(t) {
       if (!t || !t.closest) return false;
-      return !!(t.closest('#talk-btn') || t.closest('#music-btn') || t.closest('#dialogue') || t.closest('#start') || t.closest('#win') || t.closest('button'));
+      return !!(t.closest('#talk-btn') || t.closest('#music-btn') || t.closest('#pause-btn') || t.closest('#dialogue') || t.closest('#menus') || t.closest('#win') || t.closest('button') || t.closest('input') || t.closest('select'));
     }
     function onTouchStart(e) {
       if (!playing || talking) return;
@@ -1440,7 +1766,7 @@
       for (const t of e.changedTouches) {
         if (joy.active && t.identifier === joy.id) setKnob(joyOffset(t).x, joyOffset(t).y);
         else if (t.identifier === lookId) {
-          lookBy(t.clientX - lookLastX, t.clientY - lookLastY, lookSensTouch);
+          lookBy(t.clientX - lookLastX, t.clientY - lookLastY, lookSensTouch * settings.touchSens);
           lookLastX = t.clientX; lookLastY = t.clientY;
         }
       }
@@ -1572,7 +1898,7 @@
       if (!node) { closeDialogue(); return; }
       const hex = '#' + npc.color.toString(16).padStart(6, '0');
       $('dlg-name').innerHTML = `<span class="swatch" style="background:${hex}"></span>${npc.name} <span id="dlg-role">${npc.role}</span>`;
-      $('dlg-text').textContent = node.text;
+      $('dlg-text').textContent = node.text.replaceAll('{name}', avatar.name || 'friend');
       const box = $('dlg-choices');
       box.innerHTML = '';
       dlgChoices = node.choices || [];
@@ -1618,7 +1944,7 @@
       dlgChoices = [];
       document.body.classList.remove('talking');
       $('dialogue').style.display = 'none';
-      if (playing && !useTouch && $('win').style.display !== 'flex') requestLock();
+      if (playing && menu === 'play' && !useTouch && $('win').style.display !== 'flex') requestLock();
     }
     $('dlg-close').addEventListener('click', () => { unlockAudio(); closeDialogue(); });
     $('talk-btn').addEventListener('click', (e) => { e.preventDefault(); tryTalk(); });
@@ -1627,18 +1953,12 @@
     function startGame() {
       unlockAudio();
       playing = true;
+      menu = 'play';
       document.body.classList.add('playing');
-      $('start').style.display = 'none';
+      document.body.classList.remove('in-menu');
       $('hud').style.display = 'block';
-      if (!useTouch) requestLock();
+      if (!useTouch && !thirdPerson) requestLock();
     }
-    $('start-btn').addEventListener('click', startGame);
-    $('start-btn').addEventListener('touchend', (e) => { e.preventDefault(); startGame(); }, { passive: false });
-    $('win-btn').addEventListener('click', () => {
-      $('win').style.display = 'none';
-      if (playing && !useTouch && !talking) requestLock();
-    });
-
     const _v = new THREE.Vector3();
     function updateLabels() {
       const w = window.innerWidth, h = window.innerHeight;
@@ -1751,6 +2071,646 @@
       }
     }
 
+    const SAVE_VERSION = 1;
+    const SKINS = [0xffe0cc, 0xf0c4a0, 0xd09a74, 0xa56b45, 0x6b3e2e, 0x3a2418];
+    const HAIR_COLORS = [0x1a120e, 0x6b3a22, 0xc45c2a, 0xe6c36a, 0xf4f0ea, 0x8a3048];
+    const OUTFITS = [0x2f6a4a, 0x3a3a88, 0x8a2a4a, 0xc4a05a, 0x4a3068, 0x1c1c22];
+    let draft = { gender: 'female', skin: SKINS[1], hairStyle: 'short', hairColor: HAIR_COLORS[1], outfit: OUTFITS[0] };
+    let settingsReturn = 'title';
+    let previewRenderer = null;
+    let previewScene = null;
+    let previewCam = null;
+    let previewRig = null;
+    let previewMixer = null;
+    let frames = 0;
+    let fpsAcc = 0;
+    const modelPromises = {};
+
+    function saveKey() {
+      const user = auth.current();
+      return 'moonveil.save.v1.' + (user ? user.id : 'guest');
+    }
+    function persistSettings() {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    }
+    function toast(msg) {
+      const el = $('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => el.classList.remove('show'), 1400);
+    }
+
+    function authBytes(text) {
+      return new TextEncoder().encode(text);
+    }
+    function toHex(buf) {
+      return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    }
+    async function sha256(text) {
+      const digest = await crypto.subtle.digest('SHA-256', authBytes(text));
+      return toHex(digest);
+    }
+    function randomSalt() {
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      return toHex(bytes);
+    }
+    async function hashPassword(password, salt) {
+      return sha256(salt + ':' + password);
+    }
+    function readAccounts() {
+      try { return JSON.parse(localStorage.getItem('moonveil.accounts.v1') || '[]'); }
+      catch (err) { return []; }
+    }
+    function writeAccounts(list) {
+      localStorage.setItem('moonveil.accounts.v1', JSON.stringify(list));
+    }
+
+    // Local auth adapter. A Firebase or Supabase adapter can replace these
+    // methods later; the rest of the game only calls auth.signUp / signIn / signOut / current.
+    const localAuth = {
+      async signUp({ username, email, password }) {
+        const name = username.trim();
+        const list = readAccounts();
+        if (list.some((a) => a.username.toLowerCase() === name.toLowerCase())) {
+          throw new Error('That username is already at the door.');
+        }
+        const salt = randomSalt();
+        const passHash = await hashPassword(password, salt);
+        const account = { id: crypto.randomUUID(), username: name, email: email.trim(), salt, passHash };
+        list.push(account);
+        writeAccounts(list);
+        localStorage.setItem('moonveil.session.v1', account.id);
+        return { id: account.id, username: account.username, email: account.email };
+      },
+      async signIn({ username, password }) {
+        const list = readAccounts();
+        const account = list.find((a) => a.username.toLowerCase() === username.trim().toLowerCase());
+        if (!account) throw new Error('No account under that name.');
+        const passHash = await hashPassword(password, account.salt);
+        if (passHash !== account.passHash) throw new Error('That password does not match.');
+        localStorage.setItem('moonveil.session.v1', account.id);
+        return { id: account.id, username: account.username, email: account.email };
+      },
+      signOut() { localStorage.removeItem('moonveil.session.v1'); },
+      current() {
+        const id = localStorage.getItem('moonveil.session.v1');
+        if (!id) return null;
+        const account = readAccounts().find((a) => a.id === id);
+        if (!account) return null;
+        return { id: account.id, username: account.username, email: account.email };
+      }
+    };
+    const auth = localAuth;
+
+    function hasSave() {
+      try {
+        const raw = localStorage.getItem(saveKey());
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        return data && data.version === SAVE_VERSION;
+      } catch (err) { return false; }
+    }
+    function captureSave() {
+      return {
+        version: SAVE_VERSION,
+        savedAt: Date.now(),
+        accountId: auth.current() ? auth.current().id : 'guest',
+        player: {
+          name: avatar.name, gender: avatar.gender, skin: avatar.skin,
+          hairStyle: avatar.hairStyle, hairColor: avatar.hairColor, outfit: avatar.outfit,
+          x: player.x, z: player.z, yaw: player.yaw, pitch: player.pitch
+        },
+        npcs: npcs.map((n) => ({ id: n.id, friendship: n.friendship, talked: !!n.talked, friend: !!n.friend })),
+        won: !!won,
+        settings: { ...settings }
+      };
+    }
+    function writeSave(manual) {
+      if (!avatar || !avatar.name) return;
+      try {
+        localStorage.setItem(saveKey(), JSON.stringify(captureSave()));
+        persistSettings();
+        if (manual) toast('Saved');
+      } catch (err) {
+        gameErrors.push('Save failed: ' + err.message);
+        if (manual) toast('Could not save');
+      }
+    }
+    function readSave() {
+      try {
+        const data = JSON.parse(localStorage.getItem(saveKey()) || 'null');
+        if (!data || data.version !== SAVE_VERSION || !data.player) return null;
+        return data;
+      } catch (err) { return null; }
+    }
+    function applyNpcSave(list) {
+      for (const snap of list || []) {
+        const n = npcs.find((p) => p.id === snap.id);
+        if (!n) continue;
+        n.friendship = snap.friendship;
+        n.talked = !!snap.talked;
+        n.friend = !!snap.friend;
+        n.fill.style.width = Math.max(0, Math.min(100, n.friendship)) + '%';
+        n.val.textContent = String(Math.round(n.friendship));
+        n.row.classList.toggle('is-friend', n.friend);
+        n.tag.classList.toggle('friend', n.friend);
+      }
+      updateHudGoal();
+    }
+
+    function qualityAllows(tier) {
+      if (settings.quality === 'low') return tier === 'always';
+      if (settings.quality === 'medium') return tier === 'always' || tier === 'medium';
+      return true;
+    }
+    function applyGraphics() {
+      const q = settings.quality;
+      if (scene.fog) scene.fog.density = q === 'low' ? 0.032 : q === 'medium' ? 0.02 : 0.014;
+      const shadows = !!settings.shadows && q !== 'low';
+      renderer.shadowMap.enabled = shadows;
+      renderer.shadowMap.type = q === 'high' && !useTouch ? THREE.PCFSoftShadowMap : THREE.BasicShadowMap;
+      sun.castShadow = shadows;
+      const mapSize = q === 'high' ? 1024 : 512;
+      if (sun.shadow.mapSize.x !== mapSize) {
+        sun.shadow.mapSize.set(mapSize, mapSize);
+        if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+      }
+      for (const light of clubLights) {
+        const on = qualityAllows(light.userData.tier || 'always');
+        light.userData.lit = on;
+        if (!floorLights.includes(light)) light.intensity = on ? light.userData.base : 0;
+      }
+      document.body.classList.toggle('show-fps', !!settings.showFps);
+      if (audioBus) audioBus.gain.value = settings.master;
+      if (sfxBus) sfxBus.gain.value = settings.sfx;
+      if (musicGain && audioCtx) {
+        const now = audioCtx.currentTime;
+        musicGain.gain.setTargetAtTime(beatOn ? 0.55 * settings.music : 0, now, 0.05);
+      }
+      sizeView();
+    }
+
+    function fadeIn(panel) {
+      const start = performance.now();
+      function step(now) {
+        const k = Math.min(1, (now - start) / 380);
+        const e = 1 - Math.pow(1 - k, 3);
+        panel.style.opacity = String(e);
+        panel.style.transform = 'translateY(' + ((1 - e) * 14) + 'px) scale(' + (0.985 + 0.015 * e) + ')';
+        if (k < 1) requestAnimationFrame(step);
+        else { panel.style.opacity = ''; panel.style.transform = ''; }
+      }
+      requestAnimationFrame(step);
+    }
+    function openMenu(name) {
+      menu = name;
+      document.querySelectorAll('#menus .panel').forEach((panel) => {
+        const on = panel.dataset.screen === name;
+        panel.classList.toggle('show', on);
+        if (on) fadeIn(panel);
+      });
+      const inMenu = name !== 'play';
+      document.body.classList.toggle('in-menu', inMenu);
+      if (inMenu) {
+        $('hud').style.display = 'none';
+        $('paused').style.display = 'none';
+        if (locked) exitLock();
+      }
+      if (name === 'title') refreshTitle();
+      if (name === 'settings') syncSettingsForm();
+      if (name === 'create') ensurePreview();
+    }
+    function refreshTitle() {
+      const user = auth.current();
+      $('who-line').textContent = user ? 'Signed in as ' + user.username : 'Playing as a guest';
+      $('btn-continue').hidden = !hasSave();
+      const signOut = $('btn-signout');
+      if (signOut) signOut.hidden = !user;
+    }
+    function syncSettingsForm() {
+      $('set-scale').value = String(Math.round(settings.renderScale * 100));
+      $('set-dpr').value = String(settings.dprCap);
+      $('set-res').value = settings.resolution;
+      $('set-quality').value = settings.quality;
+      $('set-shadows').checked = !!settings.shadows;
+      $('set-fov').value = String(settings.fov);
+      $('set-mouse').value = String(Math.round(settings.mouseSens * 100));
+      $('set-touch').value = String(Math.round(settings.touchSens * 100));
+      $('set-invert').checked = !!settings.invertY;
+      $('set-master').value = String(Math.round(settings.master * 100));
+      $('set-music').value = String(Math.round(settings.music * 100));
+      $('set-sfx').value = String(Math.round(settings.sfx * 100));
+      $('set-fps').checked = !!settings.showFps;
+      paintSettingLabels();
+    }
+    function paintSettingLabels() {
+      $('set-scale-val').textContent = $('set-scale').value + '%';
+      $('set-dpr-val').textContent = Number($('set-dpr').value).toFixed(2);
+      $('set-fov-val').textContent = $('set-fov').value;
+      $('set-mouse-val').textContent = $('set-mouse').value + '%';
+      $('set-touch-val').textContent = $('set-touch').value + '%';
+      $('set-master-val').textContent = $('set-master').value + '%';
+      $('set-music-val').textContent = $('set-music').value + '%';
+      $('set-sfx-val').textContent = $('set-sfx').value + '%';
+    }
+    function readSettingsForm() {
+      settings = {
+        ...settings,
+        renderScale: Number($('set-scale').value) / 100,
+        dprCap: Number($('set-dpr').value),
+        resolution: $('set-res').value,
+        quality: $('set-quality').value,
+        shadows: $('set-shadows').checked,
+        fov: Number($('set-fov').value),
+        mouseSens: Number($('set-mouse').value) / 100,
+        touchSens: Number($('set-touch').value) / 100,
+        invertY: $('set-invert').checked,
+        master: Number($('set-master').value) / 100,
+        music: Number($('set-music').value) / 100,
+        sfx: Number($('set-sfx').value) / 100,
+        showFps: $('set-fps').checked
+      };
+      paintSettingLabels();
+      persistSettings();
+      applyGraphics();
+    }
+
+    function loadBase(gender) {
+      const url = gender === 'male' ? CHAR_URL.knight : CHAR_URL.elf;
+      if (!modelPromises[gender]) modelPromises[gender] = loader.loadAsync(url);
+      return modelPromises[gender];
+    }
+    function tintMesh(root, pattern, hex) {
+      root.traverse((obj) => {
+        if (!obj.isMesh || !pattern.test(obj.name)) return;
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        const next = mats.map((m) => {
+          const copy = m.clone();
+          copy.color.setHex(hex);
+          copy.side = THREE.DoubleSide;
+          return copy;
+        });
+        obj.material = next.length === 1 ? next[0] : next;
+      });
+    }
+    function clearHair(root) {
+      const old = root.getObjectByName('PlayerHair');
+      if (old && old.parent) old.parent.remove(old);
+    }
+    function addHair(root, style, color) {
+      clearHair(root);
+      const head = root.getObjectByName('head');
+      if (!head) return;
+      const group = new THREE.Group();
+      group.name = 'PlayerHair';
+      const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
+      if (style === 'short') {
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.58), mat);
+        cap.name = 'HairCap';
+        cap.position.y = 0.2;
+        group.add(cap);
+      } else if (style === 'tied') {
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), mat);
+        cap.name = 'HairCap';
+        cap.position.y = 0.2;
+        const tail = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.34, 4, 8), mat);
+        tail.name = 'HairTail';
+        tail.position.set(0, 0.02, -0.12);
+        group.add(cap, tail);
+      } else {
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.62), mat);
+        cap.name = 'HairCap';
+        cap.position.y = 0.18;
+        const fall = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.55, 4, 8), mat);
+        fall.name = 'HairFall';
+        fall.position.set(0, -0.12, -0.08);
+        group.add(cap, fall);
+      }
+      group.traverse((obj) => { if (obj.isMesh) { obj.castShadow = true; obj.frustumCulled = false; } });
+      head.add(group);
+    }
+    function dress(root, look) {
+      root.traverse((obj) => {
+        if (!obj.isMesh) return;
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+        obj.frustumCulled = false;
+        obj.visible = true;
+      });
+      const hide = look.gender === 'male'
+        ? ['Knight_Helmet', '1H_Sword', 'Round_Shield']
+        : [];
+      root.traverse((obj) => { if (hide.includes(obj.name)) obj.visible = false; });
+      tintMesh(root, /Head/, look.skin);
+      tintMesh(root, /Body|Leg|Arm|Cape/, look.outfit);
+      addHair(root, look.hairStyle, look.hairColor);
+    }
+    function fitPlayer(root) {
+      root.scale.setScalar(1);
+      root.position.set(0, 0, 0);
+      root.updateMatrixWorld(true);
+      const box = new THREE.Box3();
+      root.traverse((obj) => {
+        if (obj.isMesh && obj.visible && /Arm|Body|Head|Leg/.test(obj.name)) box.expandByObject(obj);
+      });
+      const height = Math.max(0.2, box.max.y - box.min.y);
+      root.scale.setScalar(1.72 / height);
+      root.updateMatrixWorld(true);
+      const grounded = new THREE.Box3();
+      root.traverse((obj) => {
+        if (obj.isMesh && obj.visible && /Leg|Body/.test(obj.name)) grounded.expandByObject(obj);
+      });
+      if (!grounded.isEmpty()) root.position.y -= grounded.min.y;
+    }
+    function setFirstPersonHide(hideHead) {
+      if (!playerModel) return;
+      playerModel.traverse((obj) => {
+        if (!obj.isMesh) return;
+        if (/Head|Hair|Helmet|Hat/.test(obj.name)) obj.visible = !hideHead && obj.userData.keep !== false;
+      });
+      if (avatar.gender === 'male') {
+        playerModel.traverse((obj) => {
+          if (['Knight_Helmet', '1H_Sword', 'Round_Shield'].includes(obj.name)) obj.visible = false;
+        });
+      }
+    }
+    async function makeFigure(look) {
+      const gltf = await loadBase(look.gender);
+      const model = cloneSkinned(gltf.scene);
+      dress(model, look);
+      fitPlayer(model);
+      const mixer = new THREE.AnimationMixer(model);
+      const clips = {
+        idle: THREE.AnimationClip.findByName(gltf.animations, 'Idle'),
+        walk: THREE.AnimationClip.findByName(gltf.animations, 'Walking_A')
+      };
+      const actions = {};
+      for (const key of ['idle', 'walk']) {
+        if (!clips[key]) continue;
+        const action = mixer.clipAction(clips[key], model);
+        action.setLoop(THREE.LoopRepeat, Infinity);
+        action.play();
+        action.setEffectiveWeight(key === 'idle' ? 1 : 0);
+        actions[key] = action;
+      }
+      return { model, mixer, actions };
+    }
+    async function mountPlayer(look) {
+      if (playerModel) {
+        playerAnchor.remove(playerModel);
+        playerModel = null;
+        playerMixer = null;
+        playerActions = null;
+      }
+      const figure = await makeFigure(look);
+      playerModel = figure.model;
+      playerMixer = figure.mixer;
+      playerActions = figure.actions;
+      playerAnim = 'idle';
+      playerAnchor.add(playerModel);
+      footShadow.visible = true;
+    }
+    function fadePlayer(name) {
+      if (!playerActions || !playerActions[name] || playerAnim === name) return;
+      const next = playerActions[name];
+      const prev = playerActions[playerAnim];
+      next.reset().setEffectiveWeight(1).fadeIn(0.25).play();
+      if (prev) prev.fadeOut(0.25);
+      playerAnim = name;
+    }
+    function updatePlayerAnim(dt) {
+      if (!playerMixer || menu !== 'play') return;
+      const speed = Math.hypot(player.vx, player.vz);
+      fadePlayer(speed > 0.35 ? 'walk' : 'idle');
+      if (playerActions && playerActions.walk) playerActions.walk.setEffectiveTimeScale(0.85 + Math.min(1.4, speed));
+      playerMixer.update(dt);
+    }
+
+    function renderPreview(dt) {
+      if (!previewRenderer || !previewRig) return;
+      previewRig.rotation.y += dt * 0.55;
+      if (previewMixer) previewMixer.update(dt);
+      previewRenderer.render(previewScene, previewCam);
+    }
+    async function ensurePreview() {
+      const host = $('char-preview');
+      if (!previewRenderer) {
+        previewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        previewRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+        previewRenderer.setSize(host.clientWidth || 220, host.clientHeight || 240, false);
+        previewRenderer.outputColorSpace = THREE.SRGBColorSpace;
+        host.appendChild(previewRenderer.domElement);
+        previewScene = new THREE.Scene();
+        previewScene.add(new THREE.HemisphereLight(0xfff0e0, 0x3a2058, 1.4));
+        const key = new THREE.DirectionalLight(0xfff6ea, 1.3);
+        key.position.set(2, 4, 3);
+        previewScene.add(key);
+        previewCam = new THREE.PerspectiveCamera(32, (host.clientWidth || 220) / (host.clientHeight || 240), 0.1, 20);
+        previewCam.position.set(0, 1.15, 3.35);
+        previewCam.lookAt(0, 0.9, 0);
+        previewRig = new THREE.Group();
+        previewScene.add(previewRig);
+      }
+      await rebuildPreview();
+    }
+    async function rebuildPreview() {
+      if (!previewRig) return;
+      while (previewRig.children.length) previewRig.remove(previewRig.children[0]);
+      const figure = await makeFigure(draft);
+      previewMixer = figure.mixer;
+      previewRig.add(figure.model);
+      previewRig.rotation.y = 0.4;
+    }
+
+    function fillSwatches(host, colors, key) {
+      host.innerHTML = '';
+      colors.forEach((hex) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'swatch-btn' + (draft[key] === hex ? ' on' : '');
+        b.style.background = '#' + hex.toString(16).padStart(6, '0');
+        b.addEventListener('click', () => {
+          draft[key] = hex;
+          fillSwatches(host, colors, key);
+          rebuildPreview();
+        });
+        host.appendChild(b);
+      });
+    }
+    function bindCreator() {
+      fillSwatches($('skin-swatches'), SKINS, 'skin');
+      fillSwatches($('hair-swatches'), HAIR_COLORS, 'hairColor');
+      fillSwatches($('outfit-swatches'), OUTFITS, 'outfit');
+      $('gender-seg').addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        draft.gender = btn.dataset.gender;
+        $('btn-gender-f').classList.toggle('on', draft.gender === 'female');
+        $('btn-gender-m').classList.toggle('on', draft.gender === 'male');
+        rebuildPreview();
+      });
+      $('hair-seg').addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        draft.hairStyle = btn.dataset.hair;
+        $('hair-seg').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === btn));
+        rebuildPreview();
+      });
+    }
+
+    async function enterPlay(fromSave) {
+      await mountPlayer(avatar);
+      playing = true;
+      openMenu('play');
+      document.body.classList.add('playing');
+      $('hud').style.display = 'block';
+      unlockAudio();
+      if (!useTouch) requestLock();
+      saveTimer = 0;
+      if (!fromSave) writeSave(false);
+    }
+    function resumeGame() {
+      openMenu('play');
+      document.body.classList.add('playing');
+      $('hud').style.display = 'block';
+      if (!useTouch && !thirdPerson) requestLock();
+    }
+    function returnToTitle() {
+      if (playing) writeSave(false);
+      playing = false;
+      talking = false;
+      thirdPerson = false;
+      document.body.classList.remove('playing');
+      document.body.classList.remove('talking');
+      $('dialogue').style.display = 'none';
+      $('win').style.display = 'none';
+      player.x = 0; player.z = 8.6; player.vx = 0; player.vz = 0;
+      player.yaw = 0; yawGoal = 0; player.pitch = -0.06; pitchGoal = -0.06;
+      openMenu('title');
+    }
+    function applyLoaded(data) {
+      const p = data.player;
+      avatar = {
+        name: p.name || 'Traveler', gender: p.gender === 'male' ? 'male' : 'female',
+        skin: p.skin, hairStyle: p.hairStyle || 'short', hairColor: p.hairColor, outfit: p.outfit
+      };
+      player.x = p.x; player.z = p.z; player.vx = 0; player.vz = 0;
+      player.yaw = p.yaw || 0; yawGoal = player.yaw;
+      player.pitch = p.pitch || 0; pitchGoal = player.pitch;
+      if (data.settings) settings = { ...DEFAULT_SETTINGS, ...data.settings };
+      applyGraphics();
+      applyNpcSave(data.npcs);
+      won = !!data.won;
+    }
+
+    function validUsername(value) {
+      return /^[A-Za-z0-9_]{3,24}$/.test(value.trim());
+    }
+    async function createAccount() {
+      const username = $('acct-user').value;
+      const password = $('acct-pass').value;
+      const again = $('acct-pass2').value;
+      const email = $('acct-email').value.trim();
+      const err = $('acct-error');
+      err.textContent = '';
+      if (!validUsername(username)) { err.textContent = 'Usernames are 3–24 letters, numbers, or _.'; return; }
+      if (password.length < 4) { err.textContent = 'Use at least 4 characters.'; return; }
+      if (password !== again) { err.textContent = 'Those passwords do not match.'; return; }
+      if (email && !email.includes('@')) { err.textContent = 'That email does not look right.'; return; }
+      try {
+        await auth.signUp({ username, email, password });
+        $('acct-pass').value = '';
+        $('acct-pass2').value = '';
+        openMenu('create');
+      } catch (e) { err.textContent = e.message || 'Could not create the account.'; }
+    }
+    async function doSignIn(fromNewGame) {
+      const err = $('signin-error');
+      err.textContent = '';
+      try {
+        await auth.signIn({ username: $('signin-user').value, password: $('signin-pass').value });
+        $('signin-pass').value = '';
+        openMenu(fromNewGame ? 'create' : 'title');
+      } catch (e) { err.textContent = e.message || 'Could not sign in.'; }
+    }
+
+    $('btn-new').addEventListener('click', () => {
+      unlockAudio();
+      if (auth.current()) openMenu('create');
+      else openMenu('account');
+    });
+    $('btn-continue').addEventListener('click', async () => {
+      unlockAudio();
+      const data = readSave();
+      if (!data) { refreshTitle(); return; }
+      applyLoaded(data);
+      await enterPlay(true);
+    });
+    $('btn-signin').addEventListener('click', () => { signinFromNew = false; openMenu('signin'); });
+    $('btn-settings').addEventListener('click', () => { settingsReturn = 'title'; openMenu('settings'); });
+    $('btn-credits').addEventListener('click', () => openMenu('credits'));
+    $('btn-quit').addEventListener('click', () => openMenu('quit'));
+    $('btn-credits-back').addEventListener('click', () => openMenu('title'));
+    $('btn-quit-back').addEventListener('click', () => openMenu('title'));
+    $('btn-acct-back').addEventListener('click', () => openMenu('title'));
+    $('btn-acct-create').addEventListener('click', () => { createAccount(); });
+    $('btn-acct-skip').addEventListener('click', () => { auth.signOut(); openMenu('create'); });
+    let signinFromNew = false;
+    $('btn-acct-signin').addEventListener('click', () => { signinFromNew = true; openMenu('signin'); });
+    $('btn-signin-back').addEventListener('click', () => openMenu(signinFromNew ? 'account' : 'title'));
+    $('btn-signin-go').addEventListener('click', () => { doSignIn(signinFromNew); });
+    $('btn-char-back').addEventListener('click', () => openMenu(auth.current() ? 'title' : 'account'));
+    $('btn-char-confirm').addEventListener('click', async () => {
+      const name = $('char-name').value.trim();
+      if (name.length < 1) { $('char-error').textContent = 'The regulars need a name to call you.'; return; }
+      $('char-error').textContent = '';
+      avatar = { name, ...draft };
+      player.x = 0; player.z = 8.6; player.vx = 0; player.vz = 0;
+      player.yaw = 0; yawGoal = 0; player.pitch = -0.06; pitchGoal = -0.06;
+      won = false;
+      applyNpcSave(npcData.map((n) => ({ id: n.id, friendship: 40, talked: false, friend: false })));
+      await enterPlay(false);
+    });
+    $('btn-settings-back').addEventListener('click', () => {
+      if (settingsReturn === 'pause') resumeGame();
+      else openMenu(settingsReturn);
+    });
+    ['set-scale','set-dpr','set-res','set-quality','set-shadows','set-fov','set-mouse','set-touch','set-invert','set-master','set-music','set-sfx','set-fps']
+      .forEach((id) => $(id).addEventListener('input', readSettingsForm));
+    $('btn-fullscreen').addEventListener('click', () => {
+      const root = document.documentElement;
+      if (!document.fullscreenEnabled) { toast('Fullscreen is not available'); return; }
+      if (document.fullscreenElement) document.exitFullscreen();
+      else root.requestFullscreen().catch(() => toast('Fullscreen was blocked'));
+    });
+    if (!document.fullscreenEnabled) $('btn-fullscreen').hidden = true;
+    $('pause-btn').addEventListener('click', () => openMenu('pause'));
+    $('pause-resume').addEventListener('click', resumeGame);
+    $('pause-save').addEventListener('click', () => writeSave(true));
+    $('pause-settings').addEventListener('click', () => { settingsReturn = 'pause'; openMenu('settings'); });
+    $('pause-main').addEventListener('click', returnToTitle);
+    $('win-btn').addEventListener('click', () => {
+      $('win').style.display = 'none';
+      writeSave(false);
+      if (playing && menu === 'play' && !useTouch && !talking) requestLock();
+    });
+
+    const oldSetFriendship = setFriendship;
+    setFriendship = function (npc, delta) {
+      oldSetFriendship(npc, delta);
+      writeSave(false);
+    };
+
+    bindCreator();
+    applyGraphics();
+    refreshTitle();
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && playing) writeSave(false);
+    });
+    window.addEventListener('pagehide', () => { if (playing) writeSave(false); });
+
     const clock = new THREE.Clock();
     function tick() {
       requestAnimationFrame(tick);
@@ -1768,6 +2728,7 @@
       floorLights.forEach((l, i) => {
         const hue = (t * 0.12 + i * 0.5) % 1;
         l.color.setHSL(hue, 0.8, 0.55);
+        if (!l.userData.lit) { l.intensity = 0; return; }
         l.intensity = (isMobilePerf ? 0.5 : 0.75) + Math.sin(t * 2 + i) * 0.15;
       });
       crystals.forEach((c, i) => {
@@ -1789,12 +2750,24 @@
         }
       }
 
-      if (playing && !talking && $('win').style.display !== 'flex') movePlayer(dt);
+      if (playing && menu === 'play' && !talking && $('win').style.display !== 'flex') movePlayer(dt);
       else { player.vx *= Math.max(0, 1 - dt * 8); player.vz *= Math.max(0, 1 - dt * 8); }
       applyPose(dt);
       animateNpcs(dt, t);
+      updatePlayerAnim(dt);
       updateLabels();
       updatePrompt();
+      if (menu === 'create') renderPreview(dt);
+      if (playing && menu === 'play') {
+        saveTimer += dt;
+        if (saveTimer > 12) { saveTimer = 0; writeSave(false); }
+      }
+      frames += 1;
+      fpsAcc += dt;
+      if (fpsAcc >= 0.5) {
+        if (settings.showFps) $('fps').textContent = Math.round(frames / fpsAcc) + ' fps';
+        frames = 0; fpsAcc = 0;
+      }
       renderer.render(scene, camera);
     }
     tick();
