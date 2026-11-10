@@ -1,0 +1,17 @@
+VRoid Studio base models (Base_Female, Base_Male)
+
+Author: VRoid Project (pixiv)
+Source used: the CC0 exports collected at
+https://opengameart.org/content/vroid-studio-cc0-models
+which points at VRoid's own statement that the base models and the
+beta avatar/hair samples are CC0:
+https://vroid.pixiv.help/hc/en-us/articles/4402614652569
+
+License: CC0 1.0 Universal
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The files in assets/characters/ are trimmed, recompressed copies of
+those bases (clothes, hair cards, normal maps, and facial blend shapes
+removed). Robes, hairstyles, and ornaments drawn on top are original
+to this game. Idle, walk, and dance are original skeletal clips on the
+VRoid humanoid bones.

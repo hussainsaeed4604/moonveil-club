@@ -454,14 +454,22 @@
         <div class="swatches" id="skin-swatches"></div>
         <span class="field">Hair style</span>
         <div class="seg" id="hair-seg">
-          <button type="button" class="ghost on" data-hair="short">Short</button>
-          <button type="button" class="ghost" data-hair="tied">Tied</button>
-          <button type="button" class="ghost" data-hair="long">Long</button>
+          <button type="button" class="ghost on" data-hair="long">Long</button>
+          <button type="button" class="ghost" data-hair="topknot">Topknot</button>
+          <button type="button" class="ghost" data-hair="bun">Bun</button>
         </div>
         <span class="field">Hair color</span>
         <div class="swatches" id="hair-swatches"></div>
-        <span class="field">Outfit color</span>
+        <span class="field">Robe color</span>
         <div class="swatches" id="outfit-swatches"></div>
+        <span class="field">Accent</span>
+        <div class="swatches" id="accent-swatches"></div>
+        <span class="field">Accessory</span>
+        <div class="seg" id="acc-seg">
+          <button type="button" class="ghost on" data-acc="pin">Hairpin</button>
+          <button type="button" class="ghost" data-acc="crown">Crown</button>
+          <button type="button" class="ghost" data-acc="sword">Sword</button>
+        </div>
         <p class="form-error" id="char-error"></p>
         <div class="menu-actions">
           <button class="go" id="btn-char-confirm" type="button">Enter the club</button>
@@ -515,7 +523,7 @@
     <section class="panel" data-screen="credits" id="menu-credits">
       <div class="card menu-card">
         <h1>Credits</h1>
-        <p class="lead">Moonveil Club is a small social prototype. The regulars, and the bodies you can wear, are KayKit Adventurers by Kay Lousberg, dedicated to the public domain under CC0 1.0. Ears, lute, wings, tusks, and the recolors are part of this game.</p>
+        <p class="lead">Moonveil Club is a small social prototype. The bodies are CC0 VRoid bases from the VRoid Project (pixiv), redistributed via OpenGameArt. Robes, hair, and ornaments are part of this game. Passwords never leave this browser.</p>
         <p class="lead">Accounts and saves stay in this browser. There is no server yet. The sign-in code is a small local adapter so a Firebase or Supabase one can replace it later.</p>
         <button class="go" id="btn-credits-back" type="button">Back</button>
       </div>
@@ -594,7 +602,7 @@
 
     const npcData = [
       {
-        id: 'lyra', name: 'Lyra', role: 'Elf Bard',
+        id: 'lyra', name: 'Lyra', role: 'Jade Bard',
         color: 0x7dffb0, hair: 0xf4d56a, skin: 0xf0c4a0,
         x: -6.6, z: 0.2, yaw: Math.PI * 0.5,
         kind: 'elf', dance: false,
@@ -647,7 +655,7 @@
         }
       },
       {
-        id: 'vesper', name: 'Vesper', role: 'Wizard',
+        id: 'vesper', name: 'Vesper', role: 'Star Scholar',
         color: 0x6a7dff, hair: 0xd8d0e8, skin: 0xe2b894,
         x: 6.8, z: -3.2, yaw: -Math.PI * 0.6,
         kind: 'wizard', dance: false,
@@ -700,7 +708,7 @@
         }
       },
       {
-        id: 'rowan', name: 'Rowan', role: 'Knight',
+        id: 'rowan', name: 'Rowan', role: 'Sword Cultivator',
         color: 0xc0c8d8, hair: 0x3a2a22, skin: 0xc99670,
         x: 3.4, z: 4.3, yaw: -0.4,
         kind: 'knight', dance: false,
@@ -753,7 +761,7 @@
         }
       },
       {
-        id: 'lumi', name: 'Lumi', role: 'Fairy',
+        id: 'lumi', name: 'Lumi', role: 'Moon Priestess',
         color: 0xff9ad8, hair: 0xfff0a8, skin: 0xffe0d0,
         x: 0.6, z: -0.4, yaw: 0.2,
         kind: 'fairy', dance: true,
@@ -806,7 +814,7 @@
         }
       },
       {
-        id: 'grokk', name: 'Grokk', role: 'Orc Bartender',
+        id: 'grokk', name: 'Grokk', role: 'Hearth Keeper',
         color: 0x5aaf5a, hair: 0x2a2218, skin: 0x5a8f46,
         x: 0.0, z: -7.15, yaw: 0,
         kind: 'orc', dance: false,
@@ -1068,6 +1076,9 @@
 
     scene.add(new THREE.HemisphereLight(0xb8a8ff, 0x4a2860, 1.05));
     scene.add(new THREE.AmbientLight(0x6a50a0, 0.5));
+    const rimLight = new THREE.DirectionalLight(0x9fd6ff, 0.65);
+    rimLight.position.set(-5, 6, -4);
+    scene.add(rimLight);
     const sun = new THREE.DirectionalLight(0xe8d8ff, 0.85);
     sun.position.set(4, 10, 6);
     sun.castShadow = true;
@@ -1351,167 +1362,264 @@
     }
     cocktail(5.2, 5.4);
     cocktail(-5.0, 5.6);
+    const moonGate = new THREE.Mesh(
+      new THREE.TorusGeometry(1.55, 0.07, 10, 40),
+      new THREE.MeshToonMaterial({ color: 0xe6d7b8, emissive: 0x886644, emissiveIntensity: 0.15 })
+    );
+    moonGate.position.set(-8.4, 2.15, 1.2);
+    moonGate.rotation.y = Math.PI / 2;
+    world.add(moonGate);
 
-    // Rigged humanoids (KayKit Adventurers, CC0) with skeletal idle / walk / dance.
-    const CHAR_URL = {
-      elf: 'assets/characters/lyra.glb',
-      wizard: 'assets/characters/vesper.glb',
-      knight: 'assets/characters/rowan.glb',
-      fairy: 'assets/characters/lumi.glb',
-      orc: 'assets/characters/grokk.glb'
+
+    // CC0 VRoid bases (slim adult anime). Robes, hair, and clips are added in-game.
+    const CHAR_URL = { female: 'assets/characters/female.glb', male: 'assets/characters/male.glb' };
+    const NPC_LOOK = {
+      lyra: { gender: 'female', skin: 0xf3c7a8, hairStyle: 'long', hairColor: 0x1a120e, robe: 0x2f8a62, accent: 0xe8d59a, accessory: 'pin', height: 1.7 },
+      vesper: { gender: 'male', skin: 0xe4c2a2, hairStyle: 'topknot', hairColor: 0x141414, robe: 0x24315c, accent: 0xd4b15a, accessory: 'crown', height: 1.78 },
+      rowan: { gender: 'male', skin: 0xd8b394, hairStyle: 'long', hairColor: 0x2c2118, robe: 0xd5dbe6, accent: 0x8d3030, accessory: 'sword', height: 1.82 },
+      lumi: { gender: 'female', skin: 0xffe0d2, hairStyle: 'bun', hairColor: 0xf0d48a, robe: 0xe7a0c8, accent: 0xfff1c4, accessory: 'pin', height: 1.62 },
+      grokk: { gender: 'male', skin: 0xc6d2a6, hairStyle: 'topknot', hairColor: 0x24180f, robe: 0x3c6a38, accent: 0xd7b15a, accessory: 'none', height: 1.9 }
     };
-    const CHAR_HEIGHT = { elf: 1.78, wizard: 1.92, knight: 1.9, fairy: 1.45, orc: 2.16 };
     const loader = new GLTFLoader();
     const gameErrors = [];
     let charactersReady = false;
     window.__GAME = { errors: gameErrors, charactersReady: () => charactersReady };
 
-    function cloneMat(src, colorHex) {
-      const m = src.clone();
-      m.side = THREE.DoubleSide;
-      if (colorHex != null) m.color.setHex(colorHex);
-      if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
-      return m;
+    let toonGradient = null;
+    function gradientMap() {
+      if (toonGradient) return toonGradient;
+      const data = new Uint8Array([48, 110, 170, 230, 255]);
+      toonGradient = new THREE.DataTexture(data, data.length, 1, THREE.RedFormat);
+      toonGradient.minFilter = THREE.NearestFilter;
+      toonGradient.magFilter = THREE.NearestFilter;
+      toonGradient.needsUpdate = true;
+      return toonGradient;
+    }
+    function toonMat(opts) {
+      const mat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(), side: THREE.DoubleSide, ...opts });
+      if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
+      return mat;
+    }
+    function findBone(root, name) {
+      return root.getObjectByName(name) || null;
     }
 
-    function addEars(head) {
-      const mat = new THREE.MeshStandardMaterial({ color: 0xf0c4a0, roughness: 0.55 });
-      const geo = new THREE.ConeGeometry(0.045, 0.42, 7);
-      const l = new THREE.Mesh(geo, mat);
-      l.castShadow = true;
-      l.position.set(0.2, 0.28, 0.02);
-      l.rotation.z = -0.85;
-      l.rotation.y = -0.15;
-      const r = l.clone();
-      r.position.x = -0.2;
-      r.rotation.z = 0.85;
-      r.rotation.y = 0.15;
-      head.add(l, r);
+    function silk(color, accent) {
+      return toonMat({ color, emissive: accent, emissiveIntensity: 0.12 });
     }
-
-    function addLute(chest) {
-      const lute = new THREE.Group();
-      const wood = new THREE.MeshStandardMaterial({ color: 0x8a4a28, roughness: 0.5 });
-      const body = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), wood);
-      body.scale.set(0.95, 0.4, 1.15);
-      const neck = new THREE.Mesh(new THREE.CapsuleGeometry(0.025, 0.32, 4, 6), new THREE.MeshStandardMaterial({ color: 0x6a3a1a, roughness: 0.5 }));
-      neck.position.y = 0.26;
-      lute.add(body, neck);
-      lute.position.set(-0.22, -0.08, 0.02);
-      lute.rotation.z = 1.15;
-      lute.rotation.y = 0.35;
-      lute.traverse((o) => { if (o.isMesh) o.castShadow = true; });
-      chest.add(lute);
-    }
-
-    function addWings(chest) {
-      const mat = new THREE.MeshStandardMaterial({
-        color: 0xffd6f0, emissive: 0xff77cc, emissiveIntensity: 1.2,
-        transparent: true, opacity: 0.82, roughness: 0.18, metalness: 0,
-        side: THREE.DoubleSide, depthWrite: false
-      });
-      const geo = new THREE.SphereGeometry(0.55, 14, 10);
-      const l = new THREE.Mesh(geo, mat);
-      l.scale.set(0.95, 1.55, 0.16);
-      l.position.set(-0.48, 0.18, -0.08);
-      l.rotation.y = 0.85;
-      l.rotation.z = 0.25;
-      const r = l.clone();
-      r.position.x = 0.48;
-      r.rotation.y = -0.85;
-      r.rotation.z = -0.25;
-      chest.add(l, r);
-      return { lWing: l, rWing: r };
-    }
-
-    function addTusks(head) {
-      const mat = new THREE.MeshStandardMaterial({ color: 0xf6f1e6, roughness: 0.32 });
-      const geo = new THREE.ConeGeometry(0.038, 0.24, 6);
-      const l = new THREE.Mesh(geo, mat);
-      l.castShadow = true;
-      l.position.set(-0.07, -0.08, 0.26);
-      l.rotation.x = 2.45;
-      const r = l.clone();
-      r.position.x = 0.07;
-      head.add(l, r);
-    }
-
-    function addStaffGlow(staff) {
-      if (!staff || !staff.isMesh) return null;
-      staff.geometry.computeBoundingBox();
-      const bb = staff.geometry.boundingBox;
-      const orb = new THREE.Mesh(
-        new THREE.SphereGeometry(0.065, 12, 10),
-        new THREE.MeshStandardMaterial({ color: 0xb7c6ff, emissive: 0x6688ff, emissiveIntensity: 1.25, roughness: 0.22 })
-      );
-      orb.position.y = Math.abs(bb.max.y) >= Math.abs(bb.min.y) ? bb.max.y : bb.min.y;
-      staff.add(orb);
-      return orb;
-    }
-
-    function fitHeight(model, def) {
-      model.updateMatrixWorld(true);
-      const body = new THREE.Box3();
-      model.traverse((obj) => {
+    function hideCloth(root) {
+      root.traverse((obj) => {
         if (!obj.isMesh) return;
-        if (/Arm|Body|Head|Leg|Hat|Helmet/.test(obj.name)) body.expandByObject(obj);
-      });
-      const height = Math.max(0.01, body.max.y - body.min.y);
-      model.scale.setScalar(CHAR_HEIGHT[def.kind] / height);
-      model.updateMatrixWorld(true);
-      const grounded = new THREE.Box3();
-      model.traverse((obj) => {
-        if (!obj.isMesh) return;
-        if (/Leg|Body/.test(obj.name)) grounded.expandByObject(obj);
-      });
-      if (!grounded.isEmpty()) model.position.y -= grounded.min.y;
-    }
-
-    function prepareModel(model, def) {
-      const parts = {};
-      model.traverse((obj) => {
-        if (!obj.isMesh) return;
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        const next = mats.map((m) => {
+          const name = m && m.name || '';
+          if (/CLOTH|Tops|Bottoms|Shoes|Tie|HAIR/i.test(name)) {
+            const hidden = m.clone();
+            hidden.transparent = true;
+            hidden.opacity = 0;
+            hidden.depthWrite = false;
+            hidden.colorWrite = false;
+            return hidden;
+          }
+          const tone = toonMat({ map: m.map || null, color: m.color ? m.color.clone() : new THREE.Color(0xffffff) });
+          tone.name = name;
+          return tone;
+        });
+        obj.material = next.length === 1 ? next[0] : next;
         obj.castShadow = true;
         obj.receiveShadow = true;
         obj.frustumCulled = false;
-        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-        for (const m of mats) {
-          if (!m) continue;
-          m.side = THREE.DoubleSide;
-          if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
-        }
       });
-      if (def.kind === 'orc') {
-        model.traverse((obj) => {
-          if (obj.isMesh && /Head|Arm/.test(obj.name)) obj.material = cloneMat(obj.material, 0x6fbf45);
+    }
+    function tintSkin(root, hex) {
+      root.traverse((obj) => {
+        if (!obj.isMesh) return;
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        mats.forEach((m) => {
+          if (m && /SKIN/i.test(m.name || '')) m.color.setHex(hex);
         });
+      });
+    }
+    function addRobe(root, look) {
+      const hips = findBone(root, 'J_Bip_C_Hips');
+      const chest = findBone(root, 'J_Bip_C_Chest');
+      const lua = findBone(root, 'J_Bip_L_UpperArm');
+      const rua = findBone(root, 'J_Bip_R_UpperArm');
+      const robe = silk(look.robe, look.accent);
+      const trim = silk(look.accent, look.robe);
+      if (hips) {
+        const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.5, 1.25, 20, 1, true), robe);
+        skirt.name = 'RobeSkirt';
+        skirt.position.y = -0.55;
+        const sash = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.035, 8, 16), trim);
+        sash.name = 'RobeSash';
+        sash.rotation.x = Math.PI / 2;
+        sash.position.y = 0.02;
+        const tassel = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.22, 6), trim);
+        tassel.position.set(0.16, -0.16, 0.08);
+        hips.add(skirt, sash, tassel);
       }
-      if (def.kind === 'fairy') {
-        model.traverse((obj) => {
-          if (!obj.isMesh) return;
-          obj.material = cloneMat(obj.material, 0xffc2e6);
-          obj.material.emissive = new THREE.Color(0xff6ec8);
-          obj.material.emissiveIntensity = 0.16;
-        });
+      if (chest) {
+        const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.26, 0.72, 16, 1, true), robe);
+        collar.name = 'RobeCollar';
+        collar.position.y = -0.12;
+        const band = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.02, 6, 16), trim);
+        band.rotation.x = Math.PI / 2;
+        band.position.y = 0.18;
+        chest.add(collar, band);
       }
-      const head = model.getObjectByName('head');
-      const chest = model.getObjectByName('chest');
-      parts.head = head;
-      parts.chest = chest;
-      if (def.kind === 'elf' && head) addEars(head);
-      if (def.kind === 'elf' && chest) addLute(chest);
-      if (def.kind === 'fairy' && chest) Object.assign(parts, addWings(chest));
-      if (def.kind === 'orc' && head) addTusks(head);
-      if (def.kind === 'wizard') parts.staffOrb = addStaffGlow(model.getObjectByName('2H_Staff'));
-      fitHeight(model, def);
-      parts.labelY = CHAR_HEIGHT[def.kind] + 0.22;
-      return parts;
+      function sleeve(arm, sign) {
+        if (!arm) return;
+        const bell = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.16, 0.42, 12, 1, true), robe);
+        bell.name = 'RobeSleeve';
+        bell.position.y = -0.12;
+        const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.018, 6, 12), trim);
+        cuff.rotation.x = Math.PI / 2;
+        cuff.position.y = -0.32;
+        arm.add(bell, cuff);
+      }
+      sleeve(lua, 1);
+      sleeve(rua, -1);
+    }
+    function addStyledHair(root, look) {
+      const head = findBone(root, 'J_Bip_C_Head');
+      if (!head) return;
+      const old = head.getObjectByName('PlayerHair');
+      if (old) head.remove(old);
+      const group = new THREE.Group();
+      group.name = 'PlayerHair';
+      const mat = toonMat({ color: look.hairColor });
+      const style = look.hairStyle === 'topknot' || look.hairStyle === 'bun' ? look.hairStyle : 'long';
+      if (style === 'long') {
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.6), mat);
+        cap.position.y = 0.08;
+        const left = new THREE.Mesh(new THREE.CapsuleGeometry(0.035, 0.72, 4, 8), mat);
+        left.position.set(0.08, -0.28, -0.04);
+        const right = left.clone();
+        right.position.x = -0.08;
+        const back = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.85, 4, 8), mat);
+        back.position.set(0, -0.32, -0.06);
+        group.add(cap, left, right, back);
+      } else if (style === 'topknot') {
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), mat);
+        cap.position.y = 0.06;
+        const knot = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), mat);
+        knot.position.y = 0.2;
+        const tail = new THREE.Mesh(new THREE.CapsuleGeometry(0.03, 0.55, 4, 6), mat);
+        tail.position.set(0, -0.05, -0.05);
+        group.add(cap, knot, tail);
+      } else {
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), mat);
+        cap.position.y = 0.05;
+        const bun = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), mat);
+        bun.position.set(0, 0.08, -0.08);
+        group.add(cap, bun);
+      }
+      group.traverse((obj) => { if (obj.isMesh) { obj.castShadow = true; obj.frustumCulled = false; } });
+      head.add(group);
+      const acc = look.accessory || 'pin';
+      if (acc === 'none') return;
+      const gold = toonMat({ color: look.accent || 0xe6d2a2, emissive: look.accent || 0xe6d2a2, emissiveIntensity: 0.2 });
+      const ornament = new THREE.Group();
+      ornament.name = 'PlayerAccessory';
+      if (acc === 'crown') {
+        const crown = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.018, 6, 16), gold);
+        crown.rotation.x = Math.PI / 2;
+        crown.position.y = 0.14;
+        ornament.add(crown);
+      } else if (acc === 'sword') {
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.7, 0.012), gold);
+        blade.position.set(0.16, -0.15, -0.08);
+        blade.rotation.z = 0.15;
+        ornament.add(blade);
+      } else {
+        const pin = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.02, 0.02), gold);
+        pin.position.set(0.1, 0.12, 0.04);
+        pin.rotation.z = 0.5;
+        ornament.add(pin);
+      }
+      head.add(ornament);
+    }
+    function adornFigure(model, look) {
+      hideCloth(model);
+      tintSkin(model, look.skin);
+      addRobe(model, look);
+      addStyledHair(model, look);
+      model.rotation.y = Math.PI;
+      model.updateMatrixWorld(true);
+      const box = new THREE.Box3();
+      model.traverse((obj) => {
+        if (obj.isMesh && obj.visible && obj.material && obj.material.opacity !== 0) box.expandByObject(obj);
+      });
+      const height = Math.max(0.2, box.max.y - box.min.y);
+      const target = look.height || 1.72;
+      model.scale.setScalar(target / height);
+      model.updateMatrixWorld(true);
+      const grounded = new THREE.Box3().setFromObject(model);
+      model.position.y -= grounded.min.y;
+      const head = findBone(model, 'J_Bip_C_Head');
+      return { head, labelY: target + 0.18 };
+    }
+    function buildHumanClips(root) {
+      const armBones = new Set(['J_Bip_L_UpperArm', 'J_Bip_R_UpperArm']);
+      const spec = {
+        idle: { dur: 2.6, bones: {
+          J_Bip_C_Spine: [[0, 0.03, 0, 0], [1.3, 0.06, 0, 0], [2.6, 0.03, 0, 0]],
+          J_Bip_L_UpperArm: [[0, 0], [1.3, 0.06], [2.6, 0]],
+          J_Bip_R_UpperArm: [[0, 0], [1.3, -0.06], [2.6, 0]]
+        }},
+        walk: { dur: 1.05, bones: {
+          J_Bip_L_UpperLeg: [[0, 0.6, 0, 0], [0.52, -0.55, 0, 0], [1.05, 0.6, 0, 0]],
+          J_Bip_R_UpperLeg: [[0, -0.55, 0, 0], [0.52, 0.6, 0, 0], [1.05, -0.55, 0, 0]],
+          J_Bip_L_LowerLeg: [[0, 0.15, 0, 0], [0.3, 0.75, 0, 0], [0.7, 0.15, 0, 0], [1.05, 0.15, 0, 0]],
+          J_Bip_R_LowerLeg: [[0, 0.15, 0, 0], [0.3, 0.15, 0, 0], [0.75, 0.75, 0, 0], [1.05, 0.15, 0, 0]],
+          J_Bip_L_UpperArm: [[0, 0.35], [0.52, -0.35], [1.05, 0.35]],
+          J_Bip_R_UpperArm: [[0, -0.35], [0.52, 0.35], [1.05, -0.35]],
+          J_Bip_C_Spine: [[0, 0.05, 0.06, 0], [0.52, 0.05, -0.06, 0], [1.05, 0.05, 0.06, 0]]
+        }},
+        dance: { dur: 1.8, bones: {
+          J_Bip_L_UpperArm: [[0, 0.1], [0.45, -0.95], [0.9, 0.15], [1.35, -1.05], [1.8, 0.1]],
+          J_Bip_R_UpperArm: [[0, 0.05], [0.45, 0.2], [0.9, -1.0], [1.35, 0.15], [1.8, 0.05]],
+          J_Bip_C_Spine: [[0, 0.06, 0.16, 0], [0.9, 0.08, -0.18, 0], [1.8, 0.06, 0.16, 0]],
+          J_Bip_C_Hips: [[0, 0, 0.1, 0], [0.9, 0, -0.1, 0], [1.8, 0, 0.1, 0]],
+          J_Bip_L_UpperLeg: [[0, 0.12, 0, 0], [0.9, -0.08, 0, 0], [1.8, 0.12, 0, 0]],
+          J_Bip_R_UpperLeg: [[0, -0.05, 0, 0], [0.9, 0.16, 0, 0], [1.8, -0.05, 0, 0]]
+        }}
+      };
+      const zAxis = new THREE.Vector3(0, 0, 1);
+      const clips = {};
+      for (const [key, def] of Object.entries(spec)) {
+        const tracks = [];
+        for (const [boneName, frames] of Object.entries(def.bones)) {
+          const bone = findBone(root, boneName);
+          if (!bone) continue;
+          const bind = bone.quaternion.clone();
+          const dir = boneName.includes('_L_') ? 1 : -1;
+          const times = [];
+          const values = [];
+          for (const frame of frames) {
+            let q = bind.clone();
+            if (armBones.has(boneName)) {
+              const swing = frame[1] || 0;
+              q.premultiply(new THREE.Quaternion().setFromAxisAngle(zAxis, dir * (1.28 + swing)));
+            } else {
+              const extra = new THREE.Quaternion().setFromEuler(new THREE.Euler(frame[1] || 0, frame[2] || 0, frame[3] || 0));
+              q.multiply(extra);
+            }
+            times.push(frame[0]);
+            values.push(q.x, q.y, q.z, q.w);
+          }
+          tracks.push(new THREE.QuaternionKeyframeTrack(boneName + '.quaternion', times, values));
+        }
+        const clipName = key === 'walk' ? 'Walking_A' : key === 'dance' ? 'Dance' : 'Idle';
+        clips[key] = new THREE.AnimationClip(clipName, def.dur, tracks);
+      }
+      return clips;
     }
 
-    function bindAnimations(npc, gltf, model) {
+    function bindAnimations(npc, model) {
       const mixer = new THREE.AnimationMixer(model);
-      const clip = (name) => THREE.AnimationClip.findByName(gltf.animations, name);
-      const clips = { idle: clip('Idle'), walk: clip('Walking_A'), dance: clip('Dance') };
+      const clips = buildHumanClips(model);
       const actions = {};
       for (const key of ['idle', 'walk', 'dance']) {
         if (!clips[key]) throw new Error(npc.name + ' is missing the ' + key + ' clip');
@@ -1578,11 +1686,12 @@
 
     Promise.all(npcs.map(async (npc) => {
       try {
-        const gltf = await loader.loadAsync(CHAR_URL[npc.kind]);
-        const model = gltf.scene;
-        npc.parts = prepareModel(model, npc);
+        const look = NPC_LOOK[npc.id];
+        const gltf = await loader.loadAsync(CHAR_URL[look.gender]);
+        const model = cloneSkinned(gltf.scene);
+        npc.parts = adornFigure(model, look);
         npc.mesh.add(model);
-        bindAnimations(npc, gltf, model);
+        bindAnimations(npc, model);
       } catch (err) {
         const msg = npc.name + ': ' + (err && err.message ? err.message : err);
         gameErrors.push(msg);
@@ -2074,8 +2183,9 @@
     const SAVE_VERSION = 1;
     const SKINS = [0xffe0cc, 0xf0c4a0, 0xd09a74, 0xa56b45, 0x6b3e2e, 0x3a2418];
     const HAIR_COLORS = [0x1a120e, 0x6b3a22, 0xc45c2a, 0xe6c36a, 0xf4f0ea, 0x8a3048];
-    const OUTFITS = [0x2f6a4a, 0x3a3a88, 0x8a2a4a, 0xc4a05a, 0x4a3068, 0x1c1c22];
-    let draft = { gender: 'female', skin: SKINS[1], hairStyle: 'short', hairColor: HAIR_COLORS[1], outfit: OUTFITS[0] };
+    const OUTFITS = [0x2f8a62, 0x24315c, 0xd5dbe6, 0x8a3038, 0xe7a0c8, 0x1c1c22];
+    const ACCENTS = [0xe8d59a, 0xf4f0ea, 0xc45c4a, 0x7ec8c4, 0x111111];
+    let draft = { gender: 'female', skin: SKINS[1], hairStyle: 'long', hairColor: HAIR_COLORS[0], robe: OUTFITS[0], accent: ACCENTS[0], accessory: 'pin', outfit: OUTFITS[0] };
     let settingsReturn = 'title';
     let previewRenderer = null;
     let previewScene = null;
@@ -2179,7 +2289,8 @@
         accountId: auth.current() ? auth.current().id : 'guest',
         player: {
           name: avatar.name, gender: avatar.gender, skin: avatar.skin,
-          hairStyle: avatar.hairStyle, hairColor: avatar.hairColor, outfit: avatar.outfit,
+          hairStyle: avatar.hairStyle, hairColor: avatar.hairColor, outfit: avatar.robe || avatar.outfit,
+          robe: avatar.robe || avatar.outfit, accent: avatar.accent, accessory: avatar.accessory,
           x: player.x, z: player.z, yaw: player.yaw, pitch: player.pitch
         },
         npcs: npcs.map((n) => ({ id: n.id, friendship: n.friendship, talked: !!n.talked, friend: !!n.friend })),
@@ -2338,7 +2449,7 @@
     }
 
     function loadBase(gender) {
-      const url = gender === 'male' ? CHAR_URL.knight : CHAR_URL.elf;
+      const url = gender === 'male' ? CHAR_URL.male : CHAR_URL.female;
       if (!modelPromises[gender]) modelPromises[gender] = loader.loadAsync(url);
       return modelPromises[gender];
     }
@@ -2427,28 +2538,32 @@
     function setFirstPersonHide(hideHead) {
       if (!playerModel) return;
       playerModel.traverse((obj) => {
-        if (!obj.isMesh) return;
-        if (/Head|Hair|Helmet|Hat/.test(obj.name)) obj.visible = !hideHead && obj.userData.keep !== false;
+        if (obj.name === 'Face' || obj.name === 'PlayerHair' || obj.name === 'PlayerAccessory') obj.visible = !hideHead;
       });
-      if (avatar.gender === 'male') {
-        playerModel.traverse((obj) => {
-          if (['Knight_Helmet', '1H_Sword', 'Round_Shield'].includes(obj.name)) obj.visible = false;
-        });
-      }
+    }
+    function canonLook(raw) {
+      const hairMap = { short: 'bun', tied: 'topknot', long: 'long', topknot: 'topknot', bun: 'bun' };
+      const gender = raw.gender === 'male' ? 'male' : 'female';
+      return {
+        gender,
+        skin: raw.skin || 0xf0c4a0,
+        hairStyle: hairMap[raw.hairStyle] || 'long',
+        hairColor: raw.hairColor || 0x1a120e,
+        robe: raw.robe || raw.outfit || 0x2f6a4a,
+        accent: raw.accent || 0xe6d2a2,
+        accessory: raw.accessory || 'pin',
+        height: raw.height || (gender === 'male' ? 1.78 : 1.68)
+      };
     }
     async function makeFigure(look) {
-      const gltf = await loadBase(look.gender);
+      const styled = canonLook(look);
+      const gltf = await loadBase(styled.gender);
       const model = cloneSkinned(gltf.scene);
-      dress(model, look);
-      fitPlayer(model);
+      adornFigure(model, styled);
       const mixer = new THREE.AnimationMixer(model);
-      const clips = {
-        idle: THREE.AnimationClip.findByName(gltf.animations, 'Idle'),
-        walk: THREE.AnimationClip.findByName(gltf.animations, 'Walking_A')
-      };
+      const clips = buildHumanClips(model);
       const actions = {};
-      for (const key of ['idle', 'walk']) {
-        if (!clips[key]) continue;
+      for (const key of ['idle', 'walk', 'dance']) {
         const action = mixer.clipAction(clips[key], model);
         action.setLoop(THREE.LoopRepeat, Infinity);
         action.play();
@@ -2490,7 +2605,7 @@
 
     function renderPreview(dt) {
       if (!previewRenderer || !previewRig) return;
-      previewRig.rotation.y += dt * 0.55;
+      previewRig.rotation.y += dt * 0.35;
       if (previewMixer) previewMixer.update(dt);
       previewRenderer.render(previewScene, previewCam);
     }
@@ -2508,8 +2623,8 @@
         key.position.set(2, 4, 3);
         previewScene.add(key);
         previewCam = new THREE.PerspectiveCamera(32, (host.clientWidth || 220) / (host.clientHeight || 240), 0.1, 20);
-        previewCam.position.set(0, 1.15, 3.35);
-        previewCam.lookAt(0, 0.9, 0);
+        previewCam.position.set(0, 1.05, -3.2);
+        previewCam.lookAt(0, 0.95, 0);
         previewRig = new THREE.Group();
         previewScene.add(previewRig);
       }
@@ -2521,7 +2636,7 @@
       const figure = await makeFigure(draft);
       previewMixer = figure.mixer;
       previewRig.add(figure.model);
-      previewRig.rotation.y = 0.4;
+      previewRig.rotation.y = 0;
     }
 
     function fillSwatches(host, colors, key) {
@@ -2542,7 +2657,8 @@
     function bindCreator() {
       fillSwatches($('skin-swatches'), SKINS, 'skin');
       fillSwatches($('hair-swatches'), HAIR_COLORS, 'hairColor');
-      fillSwatches($('outfit-swatches'), OUTFITS, 'outfit');
+      fillSwatches($('outfit-swatches'), OUTFITS, 'robe');
+      fillSwatches($('accent-swatches'), ACCENTS, 'accent');
       $('gender-seg').addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
@@ -2556,6 +2672,13 @@
         if (!btn) return;
         draft.hairStyle = btn.dataset.hair;
         $('hair-seg').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === btn));
+        rebuildPreview();
+      });
+      $('acc-seg').addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        draft.accessory = btn.dataset.acc;
+        $('acc-seg').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === btn));
         rebuildPreview();
       });
     }
@@ -2592,10 +2715,12 @@
     }
     function applyLoaded(data) {
       const p = data.player;
-      avatar = {
-        name: p.name || 'Traveler', gender: p.gender === 'male' ? 'male' : 'female',
-        skin: p.skin, hairStyle: p.hairStyle || 'short', hairColor: p.hairColor, outfit: p.outfit
-      };
+      avatar = canonLook({
+        name: p.name || 'Traveler', gender: p.gender, skin: p.skin,
+        hairStyle: p.hairStyle, hairColor: p.hairColor, outfit: p.outfit,
+        robe: p.robe, accent: p.accent, accessory: p.accessory
+      });
+      avatar.name = p.name || 'Traveler';
       player.x = p.x; player.z = p.z; player.vx = 0; player.vz = 0;
       player.yaw = p.yaw || 0; yawGoal = player.yaw;
       player.pitch = p.pitch || 0; pitchGoal = player.pitch;
@@ -2666,7 +2791,8 @@
       const name = $('char-name').value.trim();
       if (name.length < 1) { $('char-error').textContent = 'The regulars need a name to call you.'; return; }
       $('char-error').textContent = '';
-      avatar = { name, ...draft };
+      avatar = canonLook({ name, ...draft });
+      avatar.name = name;
       player.x = 0; player.z = 8.6; player.vx = 0; player.vz = 0;
       player.yaw = 0; yawGoal = 0; player.pitch = -0.06; pitchGoal = -0.06;
       won = false;

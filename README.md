@@ -10,23 +10,25 @@ Open the folder over HTTP (a local web server or GitHub Pages) and visit `index.
 
 ## Characters
 
-Lyra, Vesper, Rowan, Lumi, and Grokk are rigged humanoids loaded with Three.js `GLTFLoader` and played by an `AnimationMixer`. Idle, walk, and dance crossfade instead of swapping poses. Each figure has a head with a face, neck, torso, shoulders, arms and hands, and legs and feet.
+The bodies are slim adult anime bases from the VRoid Project, CC0. Each one is about 11,000 triangles before the robe and hair, which add a few hundred more. Textures are resized so `female.glb` and `male.glb` are under a megabyte each, and both genders are loaded only when needed.
 
-| Regular | Model | What makes them them |
-| --- | --- | --- |
-| Lyra, elf bard | KayKit Rogue | Pointed ears and a lute |
-| Vesper, wizard | KayKit Mage | Wizard hat, cape, and staff |
-| Rowan, knight | KayKit Knight | Helmet, cape, sword, and shield |
-| Lumi, fairy | KayKit Rogue (hooded), scaled down | Pink tint and glowing wings |
-| Grokk, orc bartender | KayKit Barbarian, scaled up | Green skin, tusks, and a mug |
+Idle, walk, and dance are skeletal clips on the VRoid humanoid bones and crossfade with an `AnimationMixer`. Materials use toon shading, with a cool rim light in the club. Robes, sleeves, sashes, tassels, and the three hairstyles (long, topknot, bun) plus hairpin, crown, or sword are built in the game so one base serves every color.
 
-The dance clip is the pack's Cheer emote, renamed `Dance`. It is a full-body skeletal loop (arms, spine, and legs) and blends with idle and walk.
+| Regular | Read |
+| --- | --- |
+| Lyra | Jade-robed bard, long dark hair, hairpin |
+| Vesper | Star scholar, topknot, deep blue robe, crown |
+| Rowan | Sword cultivator, pale robe, blade at the back |
+| Lumi | Moon priestess, pink robe, bun |
+| Grokk | Hearth keeper, green robe, topknot |
+
+A moon gate stands on the left of the lounge. Older saves still load: `short` hair becomes a bun, `tied` becomes a topknot, and the old outfit color is used as the robe color.
 
 ## Credits and licenses
 
-Character models, textures, and animations are from **KayKit — Character Pack: Adventurers** by Kay Lousberg ([kaylousberg.com](https://kaylousberg.com/), [GitHub](https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0)).
+**VRoid base models** (`Base_Female`, `Base_Male`) by the VRoid Project (pixiv). The copies here are the CC0 exports documented at [VRoid's sample-model terms](https://vroid.pixiv.help/hc/en-us/articles/4402614652569) and mirrored on [OpenGameArt](https://opengameart.org/content/vroid-studio-cc0-models). License: **CC0 1.0**. A note is in `assets/licenses/vroid-cc0.txt`.
 
-License: **CC0 1.0 Universal** (public domain). Attribution is not required. A copy of the pack's license note is in `assets/licenses/kaykit-adventurers-CC0.txt`. The files in `assets/characters/` are trimmed copies: unused weapons and animation tracks were removed so the club stays light on phones. The meshes, rig, and the idle, walk, and dance performances are the original KayKit clips. Ears, lute, wings, tusks, Grokk's green skin tint, and Lumi's pink tint were added in the game.
+The earlier KayKit Adventurers pack (also CC0, Kay Lousberg) is no longer used for the characters. Its license note remains at `assets/licenses/kaykit-adventurers-CC0.txt`.
 
 ## Menus
 
