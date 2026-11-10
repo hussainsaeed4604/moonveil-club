@@ -1,0 +1,12 @@
+{
+  "name": "moonveil-club",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:multiplayer": "node tests/multiplayer.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
+    "@supabase/supabase-js": "^2.119.0"
+  }
+}
