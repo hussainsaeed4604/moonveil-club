@@ -10,9 +10,16 @@ Open the folder over HTTP (a local web server or GitHub Pages) and visit `index.
 
 ## Characters
 
-The bodies are slim adult anime bases from the VRoid Project, CC0. Each one is about 11,000 triangles before the robe and hair, which add a few hundred more. Textures are resized so `female.glb` and `male.glb` are under a megabyte each, and both genders are loaded only when needed.
+The bodies in the repo today are slim adult anime bases from the VRoid Project, CC0, about 11,000 triangles each, with textures small enough that `female.glb` and `male.glb` stay under a megabyte. Robes, sleeves, sashes, and the three hairstyles are built on that skeleton so one base can take any color. Desktop quality uses a denser cloth and hair mesh. The Low graphics preset keeps a lighter version of the same clothes.
 
-Idle, walk, and dance are skeletal clips on the VRoid humanoid bones and crossfade with an `AnimationMixer`. Materials use toon shading, with a cool rim light in the club. Robes, sleeves, sashes, tassels, and the three hairstyles (long, topknot, bun) plus hairpin, crown, or sword are built in the game so one base serves every color.
+A later character set can replace those bases without a code change. Put the files at:
+
+- `assets/characters/high/female.glb` and `male.glb` — about 40–70k triangles, 2K textures, used for Medium and High
+- `assets/characters/lite/female.glb` and `male.glb` — about 15–20k triangles, used for Low
+
+Then set `"high": true` and/or `"lite": true` in `assets/characters/manifest.json`. Until a flag is true, the game keeps using the CC0 bases above. Both tiers should use the VRoid `J_Bip_*` bones, materials whose names contain `SKIN`, `HAIR`, `ROBE`, or `ACCENT` (the game tints those to the chosen colors), and clips named `Idle`, `Walking_A`, and `Dance`. If those clips are present they play instead of the built-in ones. If `ROBE` or `HAIR` materials are present, the procedural robe or hair is left off.
+
+Idle, walk, and dance crossfade with an `AnimationMixer`. Materials use toon shading, with a warm fill and a cool rim in the club.
 
 | Regular | Read |
 | --- | --- |
@@ -36,7 +43,7 @@ The title screen has New Game, Continue (only after a save), Sign In, Settings, 
 
 ## You
 
-Character creation is male or female, using the same KayKit rigs as the regulars (Rogue and Knight, without the knight's helmet and weapons). Pick a name, skin tone, hair style, hair color, and outfit color. The preview turns. In the club, look down to see your body and shadow. Press **V** for a third-person view. The regulars use your name when they talk.
+Character creation is male or female, on the same bases as the regulars. Pick a name, skin tone, hair style (long, topknot, or bun), hair color, robe color, accent, and a hairpin, crown, or sword. The preview turns and frames the whole figure. In the club, look down to see your body and shadow. Press **V** for a third-person view. The regulars use your name when they talk.
 
 ## Saves and settings
 
