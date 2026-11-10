@@ -1,0 +1,751 @@
+{
+  "title": "Moonveil Club \u2014 lakeside pavilion collider preview",
+  "version": 1,
+  "updated": "2026-11-10T23:07:00+05:00",
+  "source_branch": "cursor/rigged-humanoids-f19c",
+  "source_sha": "0b6fc5dd6ebd066aa4d57c719ff7eaec80c5e128",
+  "status": "preview \u2014 not yet in the repo; keep local in /workspace/realm/",
+  "coordinate_system": {
+    "handed": "right",
+    "up": "y",
+    "ground_plane": "xz",
+    "units": "meters",
+    "plus_x": "east",
+    "minus_x": "west (performance pavilion / stage)",
+    "plus_z": "south (moon-gate entrance / spawn)",
+    "minus_z": "north (hearth / bar pavilion)",
+    "yaw_zero": "faces -Z (toward the bar)"
+  },
+  "solver_notes": {
+    "shapes_are_unpadded": true,
+    "comment": "All radii, box mins/maxes, and half-extents below are solid sizes. The current game inflates them at query time by the player radius; do not bake that radius into these shapes.",
+    "agent_radius_current": 0.38,
+    "current_solver": "2d_xz",
+    "current_solver_detail": "index.html resolve() tests XZ only (no Y). Boxes are axis-aligned on XZ. Circles are infinite-height cylinders in practice because the game has no jump. Height and y_base are documentary, for a later 3D solver or stepping onto platforms.",
+    "npc_colliders_move": true,
+    "npc_colliders_detail": "NPC circles are written into the same circle list and updated each frame to the mesh XZ. NPCs themselves walk waypoints without calling resolve(); they do not steer around world solids."
+  },
+  "keep_clear": [
+    {
+      "id": "clear.spawn",
+      "type": "circle",
+      "center": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 8.6
+      },
+      "radius": 1.2,
+      "purpose": "Player spawn and New Game reset. Not a collider. Keep new solids out of this disc so the player can appear and walk forward (-Z) through the courtyard."
+    },
+    {
+      "id": "clear.dance_floor",
+      "type": "circle",
+      "center": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "radius": 3.7,
+      "purpose": "Moon-viewing terrace / dance floor, including the existing decorative rim (torus radius 3.7). Tiles are a 7x7 grid of discs, spacing 0.98, covering about \u00b12.94 on X and Z. Walkable. Not a collider. No new solids inside this radius."
+    },
+    {
+      "id": "clear.bar_front",
+      "type": "box",
+      "center": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -6.825
+      },
+      "half_extents": {
+        "x": 4.2,
+        "y": 0.0,
+        "z": 0.625
+      },
+      "min": {
+        "x": -4.2,
+        "z": -7.45
+      },
+      "max": {
+        "x": 4.2,
+        "z": -6.2
+      },
+      "purpose": "Apron in front of the bar (the walkable side, toward the courtyard). The bar solid itself ends at z = -7.45. Grokk patrols along z = -7.15 at x = -2.2, 0, 2.2. Not a collider. No new solids in this box."
+    },
+    {
+      "id": "clear.npc_waypoints",
+      "type": "circle_set",
+      "radius_padding_beyond_body": 0.4,
+      "purpose": "Each NPC waypoint listed under mobile_characters must stay clear of new static solids by at least (that NPC's body radius + 0.4).",
+      "waypoints": [
+        {
+          "npc": "lyra",
+          "points": [
+            {
+              "x": -6.6,
+              "z": 0.2
+            },
+            {
+              "x": -5.4,
+              "z": 1.8
+            },
+            {
+              "x": -6.2,
+              "z": -1.4
+            }
+          ]
+        },
+        {
+          "npc": "vesper",
+          "points": [
+            {
+              "x": 6.8,
+              "z": -3.2
+            },
+            {
+              "x": 5.2,
+              "z": -1.0
+            },
+            {
+              "x": 7.0,
+              "z": -5.0
+            }
+          ]
+        },
+        {
+          "npc": "rowan",
+          "points": [
+            {
+              "x": 3.4,
+              "z": 4.3
+            },
+            {
+              "x": 2.0,
+              "z": 5.4
+            },
+            {
+              "x": 4.8,
+              "z": 3.2
+            }
+          ]
+        },
+        {
+          "npc": "lumi",
+          "points": [
+            {
+              "x": 0.6,
+              "z": -0.4
+            },
+            {
+              "x": -1.6,
+              "z": 1.2
+            },
+            {
+              "x": 1.8,
+              "z": 1.0
+            },
+            {
+              "x": -0.8,
+              "z": -1.8
+            }
+          ]
+        },
+        {
+          "npc": "grokk",
+          "points": [
+            {
+              "x": -2.2,
+              "z": -6.78
+            },
+            {
+              "x": 0.0,
+              "z": -6.78
+            },
+            {
+              "x": 2.2,
+              "z": -6.78
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "world_bounds": [
+    {
+      "id": "bound.deck",
+      "status": "existing",
+      "type": "circle_boundary",
+      "center": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "radius": 12.4,
+      "height": null,
+      "purpose": "Walkable deck limit (ROOM_R). Current code clamps the player to this radius. After the restyle this is the lakeside deck edge, not a room wall; beyond it is water. Not a solid obstacle \u2014 do not treat it as a wall the player bumps from the inside except as a clamp / railing line."
+    }
+  ],
+  "static_existing": [
+    {
+      "id": "static.crystal.nw",
+      "status": "existing",
+      "type": "circle",
+      "center": {
+        "x": -4.3,
+        "y": 0.0,
+        "z": -4.3
+      },
+      "radius": 0.4,
+      "y_base": 0.0,
+      "height": 3.5,
+      "purpose": "Northwest dance-terrace lamp / crystal column (will be restyled, position unchanged)."
+    },
+    {
+      "id": "static.crystal.ne",
+      "status": "existing",
+      "type": "circle",
+      "center": {
+        "x": 4.3,
+        "y": 0.0,
+        "z": -4.3
+      },
+      "radius": 0.4,
+      "y_base": 0.0,
+      "height": 3.5,
+      "purpose": "Northeast dance-terrace lamp / crystal column (will be restyled, position unchanged)."
+    },
+    {
+      "id": "static.crystal.sw",
+      "status": "existing",
+      "type": "circle",
+      "center": {
+        "x": -4.3,
+        "y": 0.0,
+        "z": 4.3
+      },
+      "radius": 0.4,
+      "y_base": 0.0,
+      "height": 3.5,
+      "purpose": "Southwest dance-terrace lamp / crystal column (will be restyled, position unchanged)."
+    },
+    {
+      "id": "static.crystal.se",
+      "status": "existing",
+      "type": "circle",
+      "center": {
+        "x": 4.3,
+        "y": 0.0,
+        "z": 4.3
+      },
+      "radius": 0.4,
+      "y_base": 0.0,
+      "height": 3.5,
+      "purpose": "Southeast dance-terrace lamp / crystal column (will be restyled, position unchanged)."
+    },
+    {
+      "id": "static.stage",
+      "status": "existing",
+      "type": "circle",
+      "center": {
+        "x": -7.4,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "radius": 2.5,
+      "y_base": 0.0,
+      "height": 0.38,
+      "purpose": "Performance pavilion / stage footprint. Players cannot walk onto the platform (current gameplay). Visual platform radius is about 2.6\u20132.7; collider stays 2.5. Lyra's home sits on this disc; her outer waypoint (-5.4, 1.8) is just outside it."
+    },
+    {
+      "id": "static.bar",
+      "status": "existing",
+      "type": "box",
+      "center": {
+        "x": 0.0,
+        "y": 0.56,
+        "z": -8.075
+      },
+      "half_extents": {
+        "x": 4.2,
+        "y": 0.56,
+        "z": 0.625
+      },
+      "min": {
+        "x": -4.2,
+        "z": -8.7
+      },
+      "max": {
+        "x": 4.2,
+        "z": -7.45
+      },
+      "y_base": 0.0,
+      "height": 1.12,
+      "purpose": "Hearth / tea pavilion counter (the bar). Front face is z = -7.45 (courtyard side). Do not grow this box toward +Z."
+    },
+    {
+      "id": "static.booth.east_north",
+      "status": "existing",
+      "type": "circle",
+      "center": {
+        "x": 7.2,
+        "y": 0.0,
+        "z": -3.2
+      },
+      "radius": 1.15,
+      "y_base": 0.0,
+      "height": 1.1,
+      "purpose": "East-north sitting pavilion / booth (Vesper's home). Rotation in the scene is -\u03c0\u00b70.55; collider is a circle and ignores yaw."
+    },
+    {
+      "id": "static.booth.east_south",
+      "status": "existing",
+      "type": "circle",
+      "center": {
+        "x": 7.0,
+        "y": 0.0,
+        "z": 3.6
+      },
+      "radius": 1.15,
+      "y_base": 0.0,
+      "height": 1.1,
+      "purpose": "East-south sitting pavilion / booth. Rotation in the scene is -\u03c0\u00b70.75; collider is a circle and ignores yaw."
+    },
+    {
+      "id": "static.booth.south_west",
+      "status": "existing",
+      "type": "circle",
+      "center": {
+        "x": -3.6,
+        "y": 0.0,
+        "z": 7.2
+      },
+      "radius": 1.15,
+      "y_base": 0.0,
+      "height": 1.1,
+      "purpose": "South-west sitting pavilion / booth near the entrance. Rotation in the scene is \u03c0; collider is a circle and ignores yaw."
+    },
+    {
+      "id": "static.pouf.sw_a",
+      "status": "existing",
+      "type": "circle",
+      "center": {
+        "x": -1.15,
+        "y": 0.0,
+        "z": 6.55
+      },
+      "radius": 0.45,
+      "y_base": 0.0,
+      "height": 0.46,
+      "purpose": "Low seat east of the south-west booth. Moved off the booth disc so the solids do not overlap."
+    },
+    {
+      "id": "static.pouf.sw_b",
+      "status": "existing",
+      "type": "circle",
+      "center": {
+        "x": -1.15,
+        "y": 0.0,
+        "z": 4.85
+      },
+      "radius": 0.45,
+      "y_base": 0.0,
+      "height": 0.46,
+      "purpose": "Low seat further south. Center is 1.70 m from the other pouf, so a 0.38 m player can pass between them."
+    },
+    {
+      "id": "static.table.east",
+      "status": "existing",
+      "type": "circle",
+      "center": {
+        "x": 5.2,
+        "y": 0.0,
+        "z": 5.4
+      },
+      "radius": 0.32,
+      "y_base": 0.0,
+      "height": 0.7,
+      "purpose": "Small side table, south-east courtyard."
+    },
+    {
+      "id": "static.table.west",
+      "status": "existing",
+      "type": "circle",
+      "center": {
+        "x": -5.0,
+        "y": 0.0,
+        "z": 5.6
+      },
+      "radius": 0.32,
+      "y_base": 0.0,
+      "height": 0.7,
+      "purpose": "Small side table, south-west courtyard, near the planned blossom tree."
+    }
+  ],
+  "static_new": [
+    {
+      "id": "new.gate.entrance_post_w",
+      "status": "proposed",
+      "type": "circle",
+      "center": {
+        "x": -2.0,
+        "y": 0.0,
+        "z": 10.4
+      },
+      "radius": 0.28,
+      "y_base": 0.0,
+      "height": 3.4,
+      "purpose": "West post of the south entrance moon gate. The arch itself has no collider. Combined with the east post, this leaves a 3.44 m opening on the x-axis, centered on x = 0. Player spawn (0, 8.6) sits about 1.8 m inside the gate, looking toward the bar."
+    },
+    {
+      "id": "new.gate.entrance_post_e",
+      "status": "proposed",
+      "type": "circle",
+      "center": {
+        "x": 2.0,
+        "y": 0.0,
+        "z": 10.4
+      },
+      "radius": 0.28,
+      "y_base": 0.0,
+      "height": 3.4,
+      "purpose": "East post of the south entrance moon gate. Same opening and spawn relationship as the west post. Gap from each post's outer edge to the deck bound is enough for the current agent radius to walk around the sides."
+    },
+    {
+      "id": "new.tree.blossom_sw",
+      "status": "proposed",
+      "type": "circle",
+      "center": {
+        "x": -6.4,
+        "y": 0.0,
+        "z": 6.6
+      },
+      "radius": 0.65,
+      "y_base": 0.0,
+      "height": 4.5,
+      "purpose": "Blossom-tree trunk at the south-west deck rim. Canopy is visual only (no collider). Clear of the west side table (surface gap 0.75), the south-west booth, poufs, spawn, dance floor, and all waypoints."
+    },
+    {
+      "id": "new.bar.post_back_w",
+      "status": "proposed",
+      "type": "circle",
+      "center": {
+        "x": -4.45,
+        "y": 0.0,
+        "z": -8.65
+      },
+      "radius": 0.22,
+      "y_base": 0.0,
+      "height": 3.4,
+      "purpose": "West lake-side post of the hearth / tea pavilion, just outside the back-west corner of the existing bar box. Not in the bar-front apron."
+    },
+    {
+      "id": "new.bar.post_back_e",
+      "status": "proposed",
+      "type": "circle",
+      "center": {
+        "x": 4.45,
+        "y": 0.0,
+        "z": -8.65
+      },
+      "radius": 0.22,
+      "y_base": 0.0,
+      "height": 3.4,
+      "purpose": "East lake-side post of the hearth / tea pavilion, just outside the back-east corner of the existing bar box. Not in the bar-front apron."
+    },
+    {
+      "id": "new.bar.post_side_w",
+      "status": "proposed",
+      "type": "circle",
+      "center": {
+        "x": -4.45,
+        "y": 0.0,
+        "z": -7.85
+      },
+      "radius": 0.22,
+      "y_base": 0.0,
+      "height": 3.4,
+      "purpose": "West courtyard-side post of the hearth pavilion, still behind the bar front plane (z = -7.45) and outside the box on X. Does not enter the bar-front apron or Grokk's patrol."
+    },
+    {
+      "id": "new.bar.post_side_e",
+      "status": "proposed",
+      "type": "circle",
+      "center": {
+        "x": 4.45,
+        "y": 0.0,
+        "z": -7.85
+      },
+      "radius": 0.22,
+      "y_base": 0.0,
+      "height": 3.4,
+      "purpose": "East courtyard-side post of the hearth pavilion, still behind the bar front plane (z = -7.45) and outside the box on X."
+    },
+    {
+      "id": "new.stage.piling_n_far",
+      "status": "proposed",
+      "type": "circle",
+      "center": {
+        "x": -10.15,
+        "y": 0.0,
+        "z": -2.4
+      },
+      "radius": 0.2,
+      "y_base": -1.5,
+      "height": 4.9,
+      "purpose": "Over-water piling on the north-west side of the performance pavilion, outside the existing stage disc. Supports eaves over the lake. Below-deck y_base is documentary (into the water)."
+    },
+    {
+      "id": "new.stage.piling_n_near",
+      "status": "proposed",
+      "type": "circle",
+      "center": {
+        "x": -10.15,
+        "y": 0.0,
+        "z": -0.8
+      },
+      "radius": 0.2,
+      "y_base": -1.5,
+      "height": 4.9,
+      "purpose": "Over-water piling west of the performance pavilion, just north of stage center, outside the existing stage disc."
+    },
+    {
+      "id": "new.stage.piling_s_near",
+      "status": "proposed",
+      "type": "circle",
+      "center": {
+        "x": -10.15,
+        "y": 0.0,
+        "z": 0.8
+      },
+      "radius": 0.2,
+      "y_base": -1.5,
+      "height": 4.9,
+      "purpose": "Over-water piling west of the performance pavilion, just south of stage center, outside the existing stage disc."
+    },
+    {
+      "id": "new.stage.piling_s_far",
+      "status": "proposed",
+      "type": "circle",
+      "center": {
+        "x": -10.15,
+        "y": 0.0,
+        "z": 2.4
+      },
+      "radius": 0.2,
+      "y_base": -1.5,
+      "height": 4.9,
+      "purpose": "Over-water piling on the south-west side of the performance pavilion, outside the existing stage disc."
+    }
+  ],
+  "static_subsumed_visual": [
+    {
+      "id": "visual.gate.west_torus",
+      "status": "subsumed",
+      "type": "none",
+      "center": {
+        "x": -8.4,
+        "y": 2.15,
+        "z": 1.2
+      },
+      "purpose": "PR #4 placeholder moon-gate torus, restyled in place as a side arch on the performance pavilion. It already sits inside static.stage (distance 1.56 from stage center, stage radius 2.5). No additional collider."
+    },
+    {
+      "id": "visual.stage.posts",
+      "status": "subsumed",
+      "type": "none",
+      "parent": "static.stage",
+      "purpose": "Performance-pavilion columns on the deck platform are inside static.stage (radius 2.5). Do not add a second set of post circles on the platform or they will not change gameplay and may crowd Lyra. Over-water supports are the new.stage.piling_* solids instead."
+    },
+    {
+      "id": "visual.booth.posts",
+      "status": "subsumed",
+      "type": "none",
+      "parent": "static.booth.*",
+      "purpose": "Sitting-pavilion posts stay inside each booth's existing radius 1.15 circle. No added blockage."
+    },
+    {
+      "id": "visual.gate.entrance_arch",
+      "status": "visual_only",
+      "type": "none",
+      "center": {
+        "x": 0.0,
+        "y": 2.15,
+        "z": 10.4
+      },
+      "purpose": "Circular moon-gate arch above the south entrance. Walkable through the opening. No collider on the ring or on a threshold sill."
+    },
+    {
+      "id": "visual.tree.canopy",
+      "status": "visual_only",
+      "type": "none",
+      "parent": "new.tree.blossom_sw",
+      "purpose": "Blossom canopy and hanging petals are visual only. Only the trunk (new.tree.blossom_sw) is solid."
+    },
+    {
+      "id": "visual.lanterns",
+      "status": "visual_only",
+      "type": "none",
+      "purpose": "The seven existing hanging lanterns have no colliders and stay that way (overhead). Positions: (-7.5, 4.5), (7.5, 4.5), (-7.5, -5.5), (7.5, -5.8), (0, 6.5), (-3.2, -7.4), (3.2, -7.4)."
+    }
+  ],
+  "mobile_characters": [
+    {
+      "id": "mobile.lyra",
+      "status": "existing",
+      "type": "circle",
+      "dynamic": true,
+      "home": {
+        "x": -6.6,
+        "z": 0.2
+      },
+      "yaw_home": 1.5707963267948966,
+      "radius": 0.5,
+      "height": 1.7,
+      "waypoints": [
+        {
+          "x": -6.6,
+          "z": 0.2
+        },
+        {
+          "x": -5.4,
+          "z": 1.8
+        },
+        {
+          "x": -6.2,
+          "z": -1.4
+        }
+      ],
+      "purpose": "Lyra (stage / performance pavilion). Body circle follows the mesh; kind 'elf' uses radius 0.5."
+    },
+    {
+      "id": "mobile.vesper",
+      "status": "existing",
+      "type": "circle",
+      "dynamic": true,
+      "home": {
+        "x": 6.8,
+        "z": -3.2
+      },
+      "yaw_home": -1.8849555921538759,
+      "radius": 0.5,
+      "height": 1.78,
+      "waypoints": [
+        {
+          "x": 6.8,
+          "z": -3.2
+        },
+        {
+          "x": 5.2,
+          "z": -1.0
+        },
+        {
+          "x": 7.0,
+          "z": -5.0
+        }
+      ],
+      "purpose": "Vesper (east-north booth). Kind 'wizard' uses radius 0.5."
+    },
+    {
+      "id": "mobile.rowan",
+      "status": "existing",
+      "type": "circle",
+      "dynamic": true,
+      "home": {
+        "x": 3.4,
+        "z": 4.3
+      },
+      "yaw_home": -0.4,
+      "radius": 0.5,
+      "height": 1.82,
+      "waypoints": [
+        {
+          "x": 3.4,
+          "z": 4.3
+        },
+        {
+          "x": 2.0,
+          "z": 5.4
+        },
+        {
+          "x": 4.8,
+          "z": 3.2
+        }
+      ],
+      "purpose": "Rowan (south-east courtyard). Kind 'knight' uses radius 0.5."
+    },
+    {
+      "id": "mobile.lumi",
+      "status": "existing",
+      "type": "circle",
+      "dynamic": true,
+      "home": {
+        "x": 0.6,
+        "z": -0.4
+      },
+      "yaw_home": 0.2,
+      "radius": 0.4,
+      "height": 1.62,
+      "waypoints": [
+        {
+          "x": 0.6,
+          "z": -0.4
+        },
+        {
+          "x": -1.6,
+          "z": 1.2
+        },
+        {
+          "x": 1.8,
+          "z": 1.0
+        },
+        {
+          "x": -0.8,
+          "z": -1.8
+        }
+      ],
+      "purpose": "Lumi (dance terrace). Kind 'fairy' uses radius 0.4. All waypoints are inside the dance-floor keep-clear disc."
+    },
+    {
+      "id": "mobile.grokk",
+      "status": "existing",
+      "type": "circle",
+      "dynamic": true,
+      "home": {
+        "x": 0.0,
+        "z": -6.78
+      },
+      "yaw_home": 0.0,
+      "radius": 0.62,
+      "height": 1.9,
+      "waypoints": [
+        {
+          "x": -2.2,
+          "z": -6.78
+        },
+        {
+          "x": 0.0,
+          "z": -6.78
+        },
+        {
+          "x": 2.2,
+          "z": -6.78
+        }
+      ],
+      "purpose": "Grokk (bar front). Patrol z=-6.78 keeps his 0.62 m body south of the bar face at z=-7.45."
+    },
+    {
+      "id": "mobile.player",
+      "status": "existing",
+      "type": "circle",
+      "dynamic": true,
+      "home": {
+        "x": 0.0,
+        "z": 8.6
+      },
+      "yaw_home": 0.0,
+      "pitch_home": -0.06,
+      "radius": 0.38,
+      "height": 1.62,
+      "purpose": "Player agent. RADIUS is applied when testing against the unpadded solids above. Spawn / New Game reset is (x: 0, z: 8.6)."
+    }
+  ]
+}
