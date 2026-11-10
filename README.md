@@ -6,7 +6,27 @@ A fantasy first-person social browser game prototype. Wander a glowing lounge wi
 
 ![Mobile view with the joystick and Talk button](screenshots/mobile.png)
 
-Open `index.html` in a modern browser (desktop or iPhone Safari). The game is a single self-contained file.
+Open the folder over HTTP (a local web server or GitHub Pages) and visit `index.html` in a modern browser, including iPhone Safari. The characters are local glTF files in `assets/`, so the page has to be served — opening it as a `file://` URL cannot load them.
+
+## Characters
+
+Lyra, Vesper, Rowan, Lumi, and Grokk are rigged humanoids loaded with Three.js `GLTFLoader` and played by an `AnimationMixer`. Idle, walk, and dance crossfade instead of swapping poses. Each figure has a head with a face, neck, torso, shoulders, arms and hands, and legs and feet.
+
+| Regular | Model | What makes them them |
+| --- | --- | --- |
+| Lyra, elf bard | KayKit Rogue | Pointed ears and a lute |
+| Vesper, wizard | KayKit Mage | Wizard hat, cape, and staff |
+| Rowan, knight | KayKit Knight | Helmet, cape, sword, and shield |
+| Lumi, fairy | KayKit Rogue (hooded), scaled down | Pink tint and glowing wings |
+| Grokk, orc bartender | KayKit Barbarian, scaled up | Green skin, tusks, and a mug |
+
+The dance clip is the pack's Cheer emote, renamed `Dance`. It is a full-body skeletal loop (arms, spine, and legs) and blends with idle and walk.
+
+## Credits and licenses
+
+Character models, textures, and animations are from **KayKit — Character Pack: Adventurers** by Kay Lousberg ([kaylousberg.com](https://kaylousberg.com/), [GitHub](https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0)).
+
+License: **CC0 1.0 Universal** (public domain). Attribution is not required. A copy of the pack's license note is in `assets/licenses/kaykit-adventurers-CC0.txt`. The files in `assets/characters/` are trimmed copies: unused weapons and animation tracks were removed so the club stays light on phones. The meshes, rig, and the idle, walk, and dance performances are the original KayKit clips. Ears, lute, wings, tusks, Grokk's green skin tint, and Lumi's pink tint were added in the game.
 
 ## Desktop controls
 

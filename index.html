@@ -14,7 +14,8 @@
   <script type="importmap">
   {
     "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
     }
   }
   </script>
@@ -307,6 +308,7 @@
   </div>
   <script type="module">
     import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     const $ = (id) => document.getElementById(id);
 
     function detectMobile() {
@@ -1072,222 +1074,191 @@
     cocktail(5.2, 5.4);
     cocktail(-5.0, 5.6);
 
-    // ----- Characters (smooth capsules / spheres, no blocky boxes) -----
-    const capSeg = isMobilePerf ? 8 : 10;
-    const radSeg = isMobilePerf ? 12 : 16;
-    const sphSeg = isMobilePerf ? 14 : 18;
+    // Rigged humanoids (KayKit Adventurers, CC0) with skeletal idle / walk / dance.
+    const CHAR_URL = {
+      elf: 'assets/characters/lyra.glb',
+      wizard: 'assets/characters/vesper.glb',
+      knight: 'assets/characters/rowan.glb',
+      fairy: 'assets/characters/lumi.glb',
+      orc: 'assets/characters/grokk.glb'
+    };
+    const CHAR_HEIGHT = { elf: 1.78, wizard: 1.92, knight: 1.9, fairy: 1.45, orc: 2.16 };
+    const loader = new GLTFLoader();
+    const gameErrors = [];
+    let charactersReady = false;
+    window.__GAME = { errors: gameErrors, charactersReady: () => charactersReady };
 
-    function makeHumanoid(def) {
-      const g = new THREE.Group();
+    function cloneMat(src, colorHex) {
+      const m = src.clone();
+      m.side = THREE.DoubleSide;
+      if (colorHex != null) m.color.setHex(colorHex);
+      if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
+      return m;
+    }
+
+    function addEars(head) {
+      const mat = new THREE.MeshStandardMaterial({ color: 0xf0c4a0, roughness: 0.55 });
+      const geo = new THREE.ConeGeometry(0.045, 0.42, 7);
+      const l = new THREE.Mesh(geo, mat);
+      l.castShadow = true;
+      l.position.set(0.2, 0.28, 0.02);
+      l.rotation.z = -0.85;
+      l.rotation.y = -0.15;
+      const r = l.clone();
+      r.position.x = -0.2;
+      r.rotation.z = 0.85;
+      r.rotation.y = 0.15;
+      head.add(l, r);
+    }
+
+    function addLute(chest) {
+      const lute = new THREE.Group();
+      const wood = new THREE.MeshStandardMaterial({ color: 0x8a4a28, roughness: 0.5 });
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), wood);
+      body.scale.set(0.95, 0.4, 1.15);
+      const neck = new THREE.Mesh(new THREE.CapsuleGeometry(0.025, 0.32, 4, 6), new THREE.MeshStandardMaterial({ color: 0x6a3a1a, roughness: 0.5 }));
+      neck.position.y = 0.26;
+      lute.add(body, neck);
+      lute.position.set(-0.22, -0.08, 0.02);
+      lute.rotation.z = 1.15;
+      lute.rotation.y = 0.35;
+      lute.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+      chest.add(lute);
+    }
+
+    function addWings(chest) {
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0xffd6f0, emissive: 0xff77cc, emissiveIntensity: 1.2,
+        transparent: true, opacity: 0.82, roughness: 0.18, metalness: 0,
+        side: THREE.DoubleSide, depthWrite: false
+      });
+      const geo = new THREE.SphereGeometry(0.55, 14, 10);
+      const l = new THREE.Mesh(geo, mat);
+      l.scale.set(0.95, 1.55, 0.16);
+      l.position.set(-0.48, 0.18, -0.08);
+      l.rotation.y = 0.85;
+      l.rotation.z = 0.25;
+      const r = l.clone();
+      r.position.x = 0.48;
+      r.rotation.y = -0.85;
+      r.rotation.z = -0.25;
+      chest.add(l, r);
+      return { lWing: l, rWing: r };
+    }
+
+    function addTusks(head) {
+      const mat = new THREE.MeshStandardMaterial({ color: 0xf6f1e6, roughness: 0.32 });
+      const geo = new THREE.ConeGeometry(0.038, 0.24, 6);
+      const l = new THREE.Mesh(geo, mat);
+      l.castShadow = true;
+      l.position.set(-0.07, -0.08, 0.26);
+      l.rotation.x = 2.45;
+      const r = l.clone();
+      r.position.x = 0.07;
+      head.add(l, r);
+    }
+
+    function addStaffGlow(staff) {
+      if (!staff || !staff.isMesh) return null;
+      staff.geometry.computeBoundingBox();
+      const bb = staff.geometry.boundingBox;
+      const orb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.065, 12, 10),
+        new THREE.MeshStandardMaterial({ color: 0xb7c6ff, emissive: 0x6688ff, emissiveIntensity: 1.25, roughness: 0.22 })
+      );
+      orb.position.y = Math.abs(bb.max.y) >= Math.abs(bb.min.y) ? bb.max.y : bb.min.y;
+      staff.add(orb);
+      return orb;
+    }
+
+    function fitHeight(model, def) {
+      model.updateMatrixWorld(true);
+      const body = new THREE.Box3();
+      model.traverse((obj) => {
+        if (!obj.isMesh) return;
+        if (/Arm|Body|Head|Leg|Hat|Helmet/.test(obj.name)) body.expandByObject(obj);
+      });
+      const height = Math.max(0.01, body.max.y - body.min.y);
+      model.scale.setScalar(CHAR_HEIGHT[def.kind] / height);
+      model.updateMatrixWorld(true);
+      const grounded = new THREE.Box3();
+      model.traverse((obj) => {
+        if (!obj.isMesh) return;
+        if (/Leg|Body/.test(obj.name)) grounded.expandByObject(obj);
+      });
+      if (!grounded.isEmpty()) model.position.y -= grounded.min.y;
+    }
+
+    function prepareModel(model, def) {
       const parts = {};
-      const skinM = std(def.skin, { roughness: 0.55, metalness: 0 });
-      const clothM = std(def.color, { roughness: 0.5, metalness: def.kind === 'knight' ? 0.42 : 0.08 });
-      const hairM = std(def.hair, { roughness: 0.6 });
-      const scale = def.kind === 'fairy' ? 0.72 : def.kind === 'orc' ? 1.18 : def.kind === 'wizard' ? 1.06 : 1;
-
-      const hip = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.17, sphSeg, sphSeg), clothM));
-      hip.position.y = 0.88;
-      g.add(hip);
-
-      const torso = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.46, capSeg, radSeg), clothM));
-      torso.position.y = 1.22;
-      g.add(torso);
-      parts.torso = torso;
-
-      const neck = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.08, 6, 10), skinM));
-      neck.position.y = 1.55;
-      g.add(neck);
-
-      const headG = new THREE.Group();
-      headG.position.y = 1.72;
-      const head = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.195, sphSeg, sphSeg), skinM));
-      headG.add(head);
-      parts.head = headG;
-
-      // hair cap
-      const hair = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.205, sphSeg, 12, 0, Math.PI * 2, 0, Math.PI * 0.58), hairM));
-      hair.position.y = 0.04;
-      hair.rotation.x = -0.15;
-      headG.add(hair);
-
-      // eyes
-      const eyeM = std(0x1a1a22, { roughness: 0.3 });
-      const le = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 8), eyeM), false, false);
-      le.position.set(-0.07, 0.02, 0.16);
-      const re = le.clone();
-      re.position.x = 0.07;
-      headG.add(le, re);
-      g.add(headG);
-
-      function limb(radius, length, mat, px, py, pz) {
-        const pivot = new THREE.Group();
-        pivot.position.set(px, py, pz);
-        const mesh = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(radius, length, capSeg, radSeg), mat));
-        mesh.position.y = -length / 2 - radius * 0.2;
-        pivot.add(mesh);
-        g.add(pivot);
-        return pivot;
-      }
-      const legMat = def.kind === 'knight' ? std(0xc8d0dc, { metalness: 0.45, roughness: 0.35 }) : std(0x2a2030, { roughness: 0.65 });
-      parts.lLeg = limb(0.075, 0.52, legMat, -0.1, 0.86, 0);
-      parts.rLeg = limb(0.075, 0.52, legMat, 0.1, 0.86, 0);
-      parts.lArm = limb(0.055, 0.46, clothM, -0.30, 1.42, 0);
-      parts.rArm = limb(0.055, 0.46, clothM, 0.30, 1.42, 0);
-      parts.lArm.rotation.z = 0.18;
-      parts.rArm.rotation.z = -0.18;
-
-      // Kind-specific silhouettes
-      if (def.kind === 'elf') {
-        const earM = skinM;
-        const earGeo = new THREE.SphereGeometry(0.09, 12, 10);
-        const lEar = shadow(new THREE.Mesh(earGeo, earM), true, false);
-        lEar.position.set(-0.16, 0.04, 0.02);
-        lEar.scale.set(0.45, 1.35, 0.35);
-        lEar.rotation.z = 0.55;
-        lEar.rotation.y = 0.2;
-        const rEar = lEar.clone();
-        rEar.position.x = 0.16;
-        rEar.rotation.z = -0.55;
-        rEar.rotation.y = -0.2;
-        headG.add(lEar, rEar);
-        const braid = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.45, 6, 10), hairM));
-        braid.position.set(0.16, -0.22, -0.06);
-        braid.rotation.z = -0.4;
-        headG.add(braid);
-        // lute
-        const lute = new THREE.Group();
-        const body = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 12), std(0x8a4a28, { roughness: 0.45 })));
-        body.scale.set(1, 0.45, 1.15);
-        const neckL = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.03, 0.32, 6, 8), std(0x6a3a1a)));
-        neckL.position.set(0, 0, 0.28);
-        neckL.rotation.x = Math.PI / 2;
-        lute.add(body, neckL);
-        lute.position.set(0.28, -0.28, 0.18);
-        lute.rotation.x = 0.5;
-        parts.rArm.add(lute);
-        parts.prop = lute;
-      }
-
-      if (def.kind === 'wizard') {
-        const brim = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.45), std(0x2a2460, { roughness: 0.5 })));
-        brim.position.y = 0.12;
-        brim.scale.y = 0.25;
-        const cone = shadow(new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.62, 16, 4), std(0x2a2460, { roughness: 0.5 })));
-        cone.position.y = 0.46;
-        const band = shadow(new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.025, 8, 16), std(0xf0c36a, { metalness: 0.6, roughness: 0.3, emissive: 0xaa8844, emissiveIntensity: 0.3 })), false, false);
-        band.rotation.x = Math.PI / 2;
-        band.position.y = 0.2;
-        headG.add(brim, cone, band);
-        const beard = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), std(0xd8d0e8, { roughness: 0.75 })));
-        beard.position.set(0, -0.16, 0.1);
-        beard.scale.set(0.85, 1.15, 0.7);
-        headG.add(beard);
-        const robe = shadow(new THREE.Mesh(new THREE.ConeGeometry(0.48, 1.25, 20, 1, true), phys(0x2a2468, { roughness: 0.6, side: THREE.DoubleSide })));
-        robe.position.y = 0.85;
-        g.add(robe);
-        parts.robe = robe;
-        const staff = new THREE.Group();
-        const shaft = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.03, 1.35, 6, 8), std(0x6a4a28, { roughness: 0.5 })));
-        const orb = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.1, 14, 12), new THREE.MeshStandardMaterial({
-          color: 0x88aaff, emissive: 0x4466ff, emissiveIntensity: 1.1, roughness: 0.2
-        })), false, false);
-        orb.position.y = 0.78;
-        staff.add(shaft, orb);
-        staff.position.set(0.12, -0.55, 0.12);
-        parts.rArm.add(staff);
-        parts.staffOrb = orb;
-        parts.rArm.rotation.z = -0.08;
-        parts.rArm.rotation.x = 0.15;
-      }
-
-      if (def.kind === 'knight') {
-        const helm = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.22, sphSeg, 14, 0, Math.PI * 2, 0, Math.PI * 0.72), std(0xd0d8e4, { metalness: 0.5, roughness: 0.32 })));
-        helm.position.y = 0.04;
-        const visor = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8), std(0x1a2030, { metalness: 0.4, roughness: 0.3 })), false, false);
-        visor.position.set(0, 0.02, 0.14);
-        visor.scale.set(1.15, 0.35, 0.5);
-        const plume = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), std(0xc45c4a, { roughness: 0.7 })));
-        plume.position.set(0, 0.28, -0.02);
-        plume.scale.set(0.5, 1.4, 0.5);
-        headG.add(helm, visor, plume);
-        const pauldronL = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 10), std(0xd4dce8, { metalness: 0.5, roughness: 0.32 })));
-        pauldronL.position.set(-0.30, 1.46, 0);
-        pauldronL.scale.set(1.1, 0.7, 1);
-        const pauldronR = pauldronL.clone();
-        pauldronR.position.x = 0.30;
-        const chest = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.26, 14, 12), std(0xd8e0ec, { metalness: 0.48, roughness: 0.32 })));
-        chest.position.y = 1.26;
-        chest.scale.set(0.95, 1.05, 0.7);
-        g.add(pauldronL, pauldronR, chest);
-        const shield = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 12), std(0x6a7aaa, { metalness: 0.7, roughness: 0.35, emissive: 0x223344, emissiveIntensity: 0.15 })));
-        shield.scale.set(0.15, 1, 0.8);
-        shield.position.set(-0.12, -0.2, 0.12);
-        parts.lArm.add(shield);
-      }
-
-      if (def.kind === 'fairy') {
-        const bun = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), hairM));
-        bun.position.set(0, 0.16, -0.02);
-        headG.add(bun);
-        const wingM = new THREE.MeshPhysicalMaterial({
-          color: 0xffd6f0, emissive: 0xff88cc, emissiveIntensity: 1.1,
-          transparent: true, opacity: 0.82, roughness: 0.2, metalness: 0,
-          side: THREE.DoubleSide
-        });
-        const wingGeo = new THREE.SphereGeometry(0.34, 16, 12);
-        const lWing = shadow(new THREE.Mesh(wingGeo, wingM), false, false);
-        lWing.position.set(-0.28, 1.32, -0.1);
-        lWing.scale.set(0.55, 1.15, 0.28);
-        lWing.rotation.y = 0.65;
-        const rWing = lWing.clone();
-        rWing.position.x = 0.2;
-        rWing.rotation.y = -0.4;
-        g.add(lWing, rWing);
-        parts.lWing = lWing;
-        parts.rWing = rWing;
-        const glow = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), new THREE.MeshStandardMaterial({
-          color: 0xffcc66, emissive: 0xffaa44, emissiveIntensity: 0.8, transparent: true, opacity: 0.7
-        })), false, false);
-        glow.position.y = 1.1;
-        g.add(glow);
-        parts.glow = glow;
-        parts.lArm.rotation.z = 0.5;
-        parts.rArm.rotation.z = -0.5;
-      }
-
+      model.traverse((obj) => {
+        if (!obj.isMesh) return;
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+        obj.frustumCulled = false;
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        for (const m of mats) {
+          if (!m) continue;
+          m.side = THREE.DoubleSide;
+          if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
+        }
+      });
       if (def.kind === 'orc') {
-        head.scale.set(1.15, 0.95, 1.1);
-        const brow = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), skinM));
-        brow.position.set(0, 0.1, 0.14);
-        brow.scale.set(1.8, 0.4, 0.5);
-        const jaw = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), skinM));
-        jaw.position.set(0, -0.1, 0.1);
-        jaw.scale.set(1.15, 0.7, 0.9);
-        const tuskM = std(0xf4efe4, { roughness: 0.4 });
-        const lt = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), tuskM));
-        lt.position.set(-0.07, -0.12, 0.18);
-        lt.scale.set(0.6, 1.6, 0.6);
-        lt.rotation.x = -0.5;
-        const rt = lt.clone();
-        rt.position.x = 0.07;
-        headG.add(brow, jaw, lt, rt);
-        const apron = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 12), std(0xefe6d4, { roughness: 0.7 })));
-        apron.position.set(0, 1.05, 0.12);
-        apron.scale.set(0.85, 1.15, 0.35);
-        g.add(apron);
-        // mug
-        const mug = new THREE.Group();
-        const cup = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 10), std(0x8a4a28, { roughness: 0.5 })));
-        cup.scale.y = 1.15;
-        const foam = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), std(0xf4efe0)), false, false);
-        foam.position.y = 0.07;
-        mug.add(cup, foam);
-        mug.position.set(0.08, -0.35, 0.14);
-        parts.rArm.add(mug);
+        model.traverse((obj) => {
+          if (obj.isMesh && /Head|Arm/.test(obj.name)) obj.material = cloneMat(obj.material, 0x6fbf45);
+        });
       }
+      if (def.kind === 'fairy') {
+        model.traverse((obj) => {
+          if (!obj.isMesh) return;
+          obj.material = cloneMat(obj.material, 0xffc2e6);
+          obj.material.emissive = new THREE.Color(0xff6ec8);
+          obj.material.emissiveIntensity = 0.16;
+        });
+      }
+      const head = model.getObjectByName('head');
+      const chest = model.getObjectByName('chest');
+      parts.head = head;
+      parts.chest = chest;
+      if (def.kind === 'elf' && head) addEars(head);
+      if (def.kind === 'elf' && chest) addLute(chest);
+      if (def.kind === 'fairy' && chest) Object.assign(parts, addWings(chest));
+      if (def.kind === 'orc' && head) addTusks(head);
+      if (def.kind === 'wizard') parts.staffOrb = addStaffGlow(model.getObjectByName('2H_Staff'));
+      fitHeight(model, def);
+      parts.labelY = CHAR_HEIGHT[def.kind] + 0.22;
+      return parts;
+    }
 
-      g.scale.setScalar(scale);
-      return { group: g, parts };
+    function bindAnimations(npc, gltf, model) {
+      const mixer = new THREE.AnimationMixer(model);
+      const clip = (name) => THREE.AnimationClip.findByName(gltf.animations, name);
+      const clips = { idle: clip('Idle'), walk: clip('Walking_A'), dance: clip('Dance') };
+      const actions = {};
+      for (const key of ['idle', 'walk', 'dance']) {
+        if (!clips[key]) throw new Error(npc.name + ' is missing the ' + key + ' clip');
+        const action = mixer.clipAction(clips[key]);
+        action.setLoop(THREE.LoopRepeat, Infinity);
+        action.enabled = true;
+        action.play();
+        action.setEffectiveWeight(key === 'idle' ? 1 : 0);
+        actions[key] = action;
+      }
+      npc.mixer = mixer;
+      npc.actions = actions;
+      npc.currentAnim = 'idle';
+      npc.ready = true;
+    }
+
+    function fadeAnim(npc, name, timeScale) {
+      const next = npc.actions && npc.actions[name];
+      if (!next) return;
+      next.setEffectiveTimeScale(timeScale || 1);
+      if (npc.currentAnim === name) return;
+      const prev = npc.actions[npc.currentAnim];
+      next.reset().setEffectiveWeight(1).fadeIn(0.32).play();
+      if (prev) prev.fadeOut(0.32);
+      npc.currentAnim = name;
     }
 
     const npcs = [];
@@ -1295,7 +1266,7 @@
     const relsEl = $('rels');
 
     npcData.forEach((def, i) => {
-      const { group, parts } = makeHumanoid(def);
+      const group = new THREE.Group();
       group.position.set(def.x, 0, def.z);
       group.rotation.y = def.yaw;
       scene.add(group);
@@ -1314,7 +1285,7 @@
         <span class="val">40</span>`;
       relsEl.appendChild(row);
       npcs.push({
-        ...def, mesh: group, parts, tag, row,
+        ...def, mesh: group, parts: {}, tag, row,
         fill: row.querySelector('.fill'),
         val: row.querySelector('.val'),
         friendship: 40, talked: false, friend: false,
@@ -1322,9 +1293,28 @@
         colIndex: circles.length - 1,
         wp: 0, walkT: 0, walkPhase: 0,
         paused: 0, moving: false,
-        yaw: def.yaw
+        yaw: def.yaw,
+        ready: false, currentAnim: 'idle'
       });
     });
+
+    Promise.all(npcs.map(async (npc) => {
+      try {
+        const gltf = await loader.loadAsync(CHAR_URL[npc.kind]);
+        const model = gltf.scene;
+        npc.parts = prepareModel(model, npc);
+        npc.mesh.add(model);
+        bindAnimations(npc, gltf, model);
+      } catch (err) {
+        const msg = npc.name + ': ' + (err && err.message ? err.message : err);
+        gameErrors.push(msg);
+        console.error(msg);
+      }
+    })).then(() => {
+      charactersReady = npcs.every((n) => n.ready);
+      if (!charactersReady) gameErrors.push('One or more characters failed to load');
+    });
+
 
     const player = { x: 0, z: 8.6, yaw: 0, pitch: -0.06, vx: 0, vz: 0, bob: 0 };
     let yawGoal = 0, pitchGoal = -0.06;
@@ -1653,8 +1643,12 @@
     function updateLabels() {
       const w = window.innerWidth, h = window.innerHeight;
       for (const n of npcs) {
-        const hgt = n.kind === 'fairy' ? 1.7 : n.kind === 'orc' ? 2.55 : 2.15;
-        _v.set(n.mesh.position.x, hgt, n.mesh.position.z);
+        if (n.parts.head) {
+          n.parts.head.getWorldPosition(_v);
+          _v.y += 0.62;
+        } else {
+          _v.set(n.mesh.position.x, n.parts.labelY || 2.05, n.mesh.position.z);
+        }
         _v.project(camera);
         const vis = _v.z > -1 && _v.z < 1 && _v.x > -1.15 && _v.x < 1.15 && _v.y > -1.15 && _v.y < 1.15;
         const dist = Math.hypot(n.mesh.position.x - player.x, n.mesh.position.z - player.z);
@@ -1691,7 +1685,6 @@
 
     function animateNpcs(dt, t) {
       for (const n of npcs) {
-        const p = n.parts;
         const dist = Math.hypot(n.mesh.position.x - player.x, n.mesh.position.z - player.z);
         const close = dist < 4.4;
         const talkingTo = talking && dlgNpc === n;
@@ -1731,42 +1724,27 @@
         }
         n.mesh.rotation.y = n.yaw;
 
-        const breath = Math.sin(t * 1.6 + n.phase) * 0.015;
-        if (p.torso) p.torso.scale.y = 1 + breath * 1.2;
-        const hover = n.kind === 'fairy' ? 0.22 + Math.sin(t * 2.4 + n.phase) * 0.06 : 0;
-        const bounce = n.dance || n.kind === 'fairy'
-          ? Math.abs(Math.sin(t * (beatOn ? 5.8 : 4.2) + n.phase)) * 0.1
-          : (n.moving ? Math.abs(Math.sin(n.walkPhase)) * 0.04 : 0);
-        n.mesh.position.y = hover + bounce + (n.moving ? 0 : breath * 0.4);
+        let anim = 'idle';
+        let timeScale = 1;
+        if (n.moving && !talkingTo) {
+          anim = 'walk';
+          timeScale = n.kind === 'orc' ? 0.82 : n.kind === 'fairy' ? 1.18 : 1;
+        } else if ((n.dance || n.kind === 'fairy') && !talkingTo) {
+          anim = 'dance';
+          timeScale = beatOn ? 1.12 : 0.92;
+        }
+        if (n.forceAnim) anim = n.forceAnim;
+        fadeAnim(n, anim, timeScale);
+        if (n.mixer) n.mixer.update(dt);
 
-        const swing = n.moving ? Math.sin(n.walkPhase) * 0.55 : Math.sin(t * 1.4 + n.phase) * 0.08;
-        const armIdle = Math.sin(t * 1.5 + n.phase) * 0.12;
-        if (p.lLeg && p.rLeg) {
-          p.lLeg.rotation.x = n.moving ? swing : (n.dance ? Math.sin(t * 5) * 0.25 : 0.04);
-          p.rLeg.rotation.x = n.moving ? -swing : (n.dance ? Math.sin(t * 5 + 1) * 0.25 : 0.04);
+        const hover = n.kind === 'fairy' && anim !== 'walk' ? 0.1 + Math.sin(t * 2.2 + n.phase) * 0.04 : 0;
+        n.mesh.position.y = hover;
+        if (n.parts.lWing && n.parts.rWing) {
+          const flap = Math.sin(t * 14 + n.phase) * 0.5;
+          n.parts.lWing.rotation.z = flap;
+          n.parts.rWing.rotation.z = -flap;
         }
-        if (p.lArm && p.rArm) {
-          if (n.dance || n.kind === 'fairy') {
-            const beat = beatOn ? 6.2 : 4.4;
-            p.lArm.rotation.x = Math.sin(t * beat + n.phase) * 0.7 - 0.4;
-            p.rArm.rotation.x = Math.sin(t * beat + n.phase + 1.2) * 0.7 - 0.4;
-            p.lArm.rotation.z = 0.55 + Math.sin(t * 3 + n.phase) * 0.2;
-            p.rArm.rotation.z = -0.55 - Math.sin(t * 3 + 1) * 0.2;
-          } else if (n.moving) {
-            p.lArm.rotation.x = -swing * 0.7;
-            p.rArm.rotation.x = swing * 0.7;
-          } else {
-            p.lArm.rotation.x = armIdle;
-            p.rArm.rotation.x = n.kind === 'wizard' ? 0.2 + armIdle * 0.3 : -armIdle;
-          }
-        }
-        if (p.lWing && p.rWing) {
-          const flap = Math.sin(t * 14 + n.phase) * 0.35;
-          p.lWing.rotation.z = 0.25 + flap;
-          p.rWing.rotation.z = -0.25 - flap;
-        }
-        if (p.staffOrb) p.staffOrb.material.emissiveIntensity = 0.8 + Math.sin(t * 3 + n.phase) * 0.4;
-        if (p.head) p.head.rotation.y = close ? 0 : Math.sin(t * 0.6 + n.phase) * 0.15;
+        if (n.parts.staffOrb) n.parts.staffOrb.material.emissiveIntensity = 0.85 + Math.sin(t * 3 + n.phase) * 0.4;
 
         circles[n.colIndex].x = n.mesh.position.x;
         circles[n.colIndex].z = n.mesh.position.z;
@@ -1850,8 +1828,17 @@
         if (pitch != null) { player.pitch = pitch; pitchGoal = pitch; }
         applyPose(1);
       },
-      getNpcs: () => npcs.map((n) => ({ name: n.name, role: n.role, friendship: n.friendship, x: n.mesh.position.x, z: n.mesh.position.z })),
-      errors: []
+      setAnim(name, anim) {
+        const n = npcs.find((p) => p.name === name);
+        if (n) n.forceAnim = anim || null;
+      },
+      charactersReady: () => charactersReady,
+      getNpcs: () => npcs.map((n) => ({
+        name: n.name, role: n.role, friendship: n.friendship,
+        x: n.mesh.position.x, z: n.mesh.position.z, yaw: n.yaw,
+        ready: !!n.ready, anim: n.currentAnim || null
+      })),
+      errors: gameErrors
     };
     window.addEventListener('error', (e) => { window.__GAME.errors.push(String(e.message || e)); });
     window.addEventListener('unhandledrejection', (e) => { window.__GAME.errors.push(String(e.reason || e)); });
