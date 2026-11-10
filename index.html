@@ -588,9 +588,10 @@
     const TALK_RANGE = 2.85;
     const EYE = 1.62;
     const RADIUS = 0.38;
-    const MAX_SPEED = 4.6;
-    const ACCEL = 11;
-    const DECEL = 14;
+    const WALK_SPEED = 2.7;
+    const SPRINT_SPEED = 4.2;
+    const ACCEL = 26;
+    const DECEL = 12;
 
     const npcData = [
       {
@@ -808,9 +809,9 @@
       {
         id: 'grokk', name: 'Grokk', role: 'Orc Bartender',
         color: 0x5aaf5a, hair: 0x2a2218, skin: 0x5a8f46,
-        x: 0.0, z: -7.15, yaw: 0,
+        x: 0.0, z: -6.78, yaw: 0,
         kind: 'orc', dance: false,
-        waypoints: [{ x: -2.2, z: -7.15 }, { x: 0.0, z: -7.15 }, { x: 2.2, z: -7.15 }],
+        waypoints: [{ x: -2.2, z: -6.78 }, { x: 0.0, z: -6.78 }, { x: 2.2, z: -6.78 }],
         start: 'hello',
         nodes: {
           hello: {
@@ -1116,10 +1117,31 @@
       addGlow(2.2, 2.3, 2.2, 0x4df0ff, isMobilePerf ? 0.55 : 0.8, 6, 'medium')
     ];
 
+    // Realm Builder collider document. Shapes are unpadded; resolve() adds agentRadius.
+    // Proposed solids (no mesh yet) are skipped. keep_clear and visual entries are not solids.
+    async function loadColliderDoc() {
+      try {
+        const res = await fetch('colliders.json');
+        if (res.ok) return await res.json();
+      } catch (err) { /* built-in solids below still collide */ }
+      return null;
+    }
+    const colliderDoc = await loadColliderDoc();
+    const useColliderDoc = !!(colliderDoc && Array.isArray(colliderDoc.static_existing));
+    let agentRadius = RADIUS;
+
     const boxes = [];
     const circles = [];
     function addBoxCollider(minX, maxX, minZ, maxZ) { boxes.push({ minX, maxX, minZ, maxZ }); }
-    function addCircleCollider(x, z, r) { circles.push({ x, z, r }); }
+    function addCircleCollider(x, z, r, extra) {
+      circles.push({ x, z, r, dynamic: !!(extra && extra.dynamic), id: (extra && extra.id) || '' });
+    }
+    function solidCenter(id, x, z) {
+      if (!colliderDoc) return { x, z };
+      const lists = [].concat(colliderDoc.static_existing || [], colliderDoc.static_new || []);
+      const s = lists.find((item) => item.id === id && item.center);
+      return s ? { x: s.center.x, z: s.center.z } : { x, z };
+    }
 
     function std(color, opts = {}) {
       return new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.08, ...opts });
@@ -1159,8 +1181,8 @@
     ceiling.rotation.x = Math.PI / 2;
     ceiling.position.y = 5.35;
     world.add(ceiling);
-    // Keep player inside
-    const ROOM_R = 12.4;
+    // Keep player inside. Overridden by world_bounds circle_boundary when the doc loads.
+    let ROOM_R = 12.4;
 
     // Glow trim around the room
     const trim = shadow(new THREE.Mesh(new THREE.TorusGeometry(13.15, 0.06, 8, 64), new THREE.MeshStandardMaterial({
@@ -1212,7 +1234,7 @@
       cryst.position.y = 3.05;
       g.add(col, cap, cryst);
       world.add(g);
-      addCircleCollider(x, z, 0.4);
+      if (!useColliderDoc) addCircleCollider(x, z, 0.4);
       return cryst;
     }
     const crystals = [
@@ -1268,7 +1290,7 @@
     arch.position.set(-0.1, 2.3, 0);
     stage.add(arch);
     world.add(stage);
-    addCircleCollider(-7.4, 0, 2.5);
+    if (!useColliderDoc) addCircleCollider(-7.4, 0, 2.5);
 
     // Bar (north)
     const bar = new THREE.Group();
@@ -1294,7 +1316,7 @@
       bar.add(bottle);
     }
     world.add(bar);
-    addBoxCollider(-4.2, 4.2, -8.7, -7.45);
+    if (!useColliderDoc) addBoxCollider(-4.2, 4.2, -8.7, -7.45);
 
     // Back bar wall nook
     const nook = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 8.4, 12), std(0xf0c36a, { metalness: 0.5, roughness: 0.35, emissive: 0x886622, emissiveIntensity: 0.2 })));
@@ -1323,7 +1345,7 @@
       lamp.position.set(0, 1.0, 0.55);
       g.add(seat, back, table, pedestal, lamp);
       world.add(g);
-      addCircleCollider(x, z, 1.15);
+      if (!useColliderDoc) addCircleCollider(x, z, 1.15);
     }
     booth(7.2, -3.2, -Math.PI * 0.55, 0x3a2860);
     booth(7.0, 3.6, -Math.PI * 0.75, 0x4a2040);
@@ -1335,10 +1357,13 @@
       p.scale.y = 0.55;
       p.position.set(x, 0.22, z);
       world.add(p);
-      addCircleCollider(x, z, 0.45);
+      if (!useColliderDoc) addCircleCollider(x, z, 0.45);
     }
-    pouf(-3.4, 6.2, 0x6a3060);
-    pouf(-2.2, 7.0, 0x305070);
+    // Moved east of the south-west booth so the seat discs no longer overlap it or each other.
+    const poufA = solidCenter('static.pouf.sw_a', -1.15, 6.55);
+    const poufB = solidCenter('static.pouf.sw_b', -1.15, 4.85);
+    pouf(poufA.x, poufA.z, 0x6a3060);
+    pouf(poufB.x, poufB.z, 0x305070);
 
     // Small side tables
     function cocktail(x, z) {
@@ -1347,10 +1372,25 @@
       const stem = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.7, 10), std(0x2a1a18)));
       stem.position.set(x, 0.35, z);
       world.add(top, stem);
-      addCircleCollider(x, z, 0.32);
+      if (!useColliderDoc) addCircleCollider(x, z, 0.32);
     }
     cocktail(5.2, 5.4);
     cocktail(-5.0, 5.6);
+
+    function installColliderDoc(doc) {
+      const solids = [].concat(doc.static_existing || [], doc.static_new || []);
+      for (const s of solids) {
+        if (s.status === 'proposed' || s.type === 'none') continue;
+        if (s.type === 'circle' && s.center && s.radius > 0) {
+          addCircleCollider(s.center.x, s.center.z, s.radius, { id: s.id });
+        } else if (s.type === 'box' && s.min && s.max) {
+          addBoxCollider(s.min.x, s.max.x, s.min.z, s.max.z);
+        }
+      }
+      const deck = (doc.world_bounds || []).find((b) => b.type === 'circle_boundary' && b.radius);
+      if (deck) ROOM_R = deck.radius;
+    }
+    if (useColliderDoc) installColliderDoc(colliderDoc);
 
     // Rigged humanoids (KayKit Adventurers, CC0) with skeletal idle / walk / dance.
     const CHAR_URL = {
@@ -1543,12 +1583,25 @@
     const labelsRoot = $('labels');
     const relsEl = $('rels');
 
+    if (colliderDoc && colliderDoc.mobile_characters) {
+      for (const m of colliderDoc.mobile_characters) {
+        const id = String(m.id || '').replace(/^mobile\./, '');
+        if (id === 'player' && m.radius) agentRadius = m.radius;
+        const npc = npcData.find((n) => n.id === id);
+        if (!npc) continue;
+        if (m.home) { npc.x = m.home.x; npc.z = m.home.z; }
+        if (m.waypoints && m.waypoints.length) npc.waypoints = m.waypoints.map((p) => ({ x: p.x, z: p.z }));
+        if (m.radius) npc.bodyRadius = m.radius;
+      }
+    }
+
     npcData.forEach((def, i) => {
       const group = new THREE.Group();
       group.position.set(def.x, 0, def.z);
       group.rotation.y = def.yaw;
       scene.add(group);
-      addCircleCollider(def.x, def.z, def.kind === 'orc' ? 0.62 : def.kind === 'fairy' ? 0.4 : 0.5);
+      const bodyR = def.bodyRadius || (def.kind === 'orc' ? 0.62 : def.kind === 'fairy' ? 0.4 : 0.5);
+      addCircleCollider(def.x, def.z, bodyR, { dynamic: true, id: 'mobile.' + def.id });
       const tag = document.createElement('div');
       tag.className = 'nametag';
       tag.textContent = def.name;
@@ -1614,6 +1667,7 @@
     let playerAnim = 'idle';
     let saveTimer = 0;
     let yawGoal = 0, pitchGoal = -0.06;
+    let visualYaw = 0;
     const keys = Object.create(null);
     const joy = { active: false, id: null, x: 0, y: 0 };
     let lookId = null, lookLastX = 0, lookLastY = 0;
@@ -1621,30 +1675,61 @@
     let nearNpc = null, dlgNpc = null, dlgChoices = [];
     const lookSensDesk = 0.0022;
     const lookSensTouch = 0.0034;
-    const LOOK_SMOOTH = 16;
+    const BODY_YAW_RATE = 14;
+
+    function footSurface(x, z) {
+      if (Math.hypot(x + 7.4, z) <= 2.7) return 'wood';
+      if (Math.hypot(x, z) > 3.7) return 'wood';
+      return 'stone';
+    }
 
     function applyPose(dt) {
-      const k = 1 - Math.exp(-LOOK_SMOOTH * (dt || 1 / 60));
-      player.yaw += (yawGoal - player.yaw) * k;
-      player.pitch += (pitchGoal - player.pitch) * k;
+      const step = dt || 1 / 60;
+      player.yaw = yawGoal;
+      player.pitch = pitchGoal;
       const spd = Math.hypot(player.vx, player.vz);
-      if (playing && !talking && spd > 0.25) player.bob += (dt || 0.016) * 9.5 * Math.min(1.4, spd / 2.5);
-      const bob = Math.sin(player.bob) * 0.045 * Math.min(1, spd / MAX_SPEED);
+      const fade = Math.min(1, Math.max(0, (spd - 0.4) / 0.6));
+      const prevBob = player.bob;
+      if (playing && !talking && spd > 0.05) player.bob += step * (Math.PI * 2) * (spd / 0.74);
+      // One footfall per 0.74 m, the same period as the head bob, and only while
+      // actually walking. The dance terrace (inner 3.7 m) is stone. The outer
+      // deck and the performance pavilion are wood.
+      // Sound: window.addEventListener('footstep', (e) => {
+      //   const { foot, speed, surface } = e.detail; // foot 'L'|'R', surface 'stone'|'wood'
+      // });
+      if (playing && !talking && spd >= 0.4) {
+        const prevN = Math.floor(prevBob / (Math.PI * 2));
+        const nextN = Math.floor(player.bob / (Math.PI * 2));
+        for (let n = prevN + 1; n <= nextN; n++) {
+          player.foot = player.foot === 'L' ? 'R' : 'L';
+          window.dispatchEvent(new CustomEvent('footstep', {
+            detail: { foot: player.foot, speed: spd, surface: footSurface(player.x, player.z) }
+          }));
+        }
+      }
+      const bobY = Math.sin(player.bob) * 0.022 * fade;
+      const bobX = Math.cos(player.bob) * 0.010 * fade;
+      const bobScale = thirdPerson && playerModel ? 0.25 : 1;
+      const yawK = 1 - Math.exp(-BODY_YAW_RATE * step);
+      if (thirdPerson && playerModel) visualYaw += (player.yaw - visualYaw) * yawK;
+      else visualYaw = player.yaw;
       playerAnchor.position.set(player.x, 0, player.z);
-      playerAnchor.rotation.y = player.yaw + Math.PI;
+      playerAnchor.rotation.y = visualYaw + Math.PI;
       footShadow.visible = !!playerModel;
+      const swayX = Math.cos(player.yaw) * bobX * bobScale;
+      const swayZ = -Math.sin(player.yaw) * bobX * bobScale;
       if (thirdPerson && playerModel) {
         const dist = 3.15;
         camera.position.set(
-          player.x + Math.sin(player.yaw) * dist,
-          EYE + 0.35 + bob,
-          player.z + Math.cos(player.yaw) * dist
+          player.x + Math.sin(player.yaw) * dist + swayX,
+          EYE + 0.35 + bobY * bobScale,
+          player.z + Math.cos(player.yaw) * dist + swayZ
         );
         camera.lookAt(player.x, 1.25, player.z);
         playerModel.visible = true;
         setFirstPersonHide(false);
       } else {
-        camera.position.set(player.x, EYE + bob, player.z);
+        camera.position.set(player.x + swayX, EYE + bobY * bobScale, player.z + swayZ);
         camera.rotation.order = 'YXZ';
         camera.rotation.y = player.yaw;
         camera.rotation.x = player.pitch;
@@ -1666,6 +1751,8 @@
       const ySign = settings.invertY ? -1 : 1;
       pitchGoal -= dy * sens * ySign;
       clampPitchGoal();
+      player.yaw = yawGoal;
+      player.pitch = pitchGoal;
     }
 
     window.addEventListener('keydown', (e) => {
@@ -1792,36 +1879,79 @@
       if (locked) exitLock();
     }, { passive: true });
 
-    function resolve(x, z) {
-      const d0 = Math.hypot(x, z);
-      if (d0 > ROOM_R) {
-        x = (x / d0) * ROOM_R;
-        z = (z / d0) * ROOM_R;
-      }
-      for (const c of boxes) {
-        const minX = c.minX - RADIUS, maxX = c.maxX + RADIUS;
-        const minZ = c.minZ - RADIUS, maxZ = c.maxZ + RADIUS;
-        if (x > minX && x < maxX && z > minZ && z < maxZ) {
-          const left = x - minX, right = maxX - x, top = z - minZ, bot = maxZ - z;
-          const m = Math.min(left, right, top, bot);
-          if (m === left) x = minX;
-          else if (m === right) x = maxX;
-          else if (m === top) z = minZ;
-          else z = maxZ;
+    function pushCircle(x, z, c, padding) {
+      const dx = x - c.x, dz = z - c.z;
+      const min = c.r + padding;
+      const d2 = dx * dx + dz * dz;
+      if (d2 >= min * min) return null;
+      if (d2 <= 1e-8) return { nx: 0, nz: 1, pen: min };
+      const d = Math.sqrt(d2);
+      return { nx: dx / d, nz: dz / d, pen: min - d };
+    }
+
+    function resolve(x, z, vx, vz, dt) {
+      const contacts = [];
+      const step = dt || 1 / 60;
+      function staticPass() {
+        const d0 = Math.hypot(x, z);
+        if (d0 > ROOM_R) {
+          const nx = x / d0, nz = z / d0;
+          x = nx * ROOM_R;
+          z = nz * ROOM_R;
+          contacts.push({ nx, nz, deck: true });
+        }
+        for (const c of boxes) {
+          const minX = c.minX - agentRadius, maxX = c.maxX + agentRadius;
+          const minZ = c.minZ - agentRadius, maxZ = c.maxZ + agentRadius;
+          if (x > minX && x < maxX && z > minZ && z < maxZ) {
+            const left = x - minX, right = maxX - x, top = z - minZ, bot = maxZ - z;
+            const m = Math.min(left, right, top, bot);
+            let nx = 0, nz = 0;
+            if (m === left) { x = minX; nx = -1; }
+            else if (m === right) { x = maxX; nx = 1; }
+            else if (m === top) { z = minZ; nz = -1; }
+            else { z = maxZ; nz = 1; }
+            contacts.push({ nx, nz, deck: false });
+          }
+        }
+        for (const c of circles) {
+          if (c.dynamic || c.r <= 0.01) continue;
+          const sep = pushCircle(x, z, c, agentRadius);
+          if (!sep) continue;
+          x += sep.nx * sep.pen;
+          z += sep.nz * sep.pen;
+          contacts.push({ nx: sep.nx, nz: sep.nz, deck: false });
         }
       }
+      for (let iter = 0; iter < 3; iter++) staticPass();
+      const gentle = 1.8 * step;
       for (const c of circles) {
-        if (c.r <= 0.01) continue;
-        const dx = x - c.x, dz = z - c.z;
-        const min = c.r + RADIUS;
-        const d2 = dx * dx + dz * dz;
-        if (d2 < min * min && d2 > 1e-8) {
-          const d = Math.sqrt(d2);
-          x = c.x + (dx / d) * min;
-          z = c.z + (dz / d) * min;
+        if (!c.dynamic || c.r <= 0.01) continue;
+        const sep = pushCircle(x, z, c, agentRadius);
+        if (!sep) continue;
+        const push = Math.min(sep.pen, gentle);
+        x += sep.nx * push;
+        z += sep.nz * push;
+        contacts.push({ nx: sep.nx, nz: sep.nz, deck: false });
+      }
+      staticPass();
+      const d1 = Math.hypot(x, z);
+      if (d1 > ROOM_R) {
+        const nx = x / d1, nz = z / d1;
+        x = nx * ROOM_R;
+        z = nz * ROOM_R;
+        contacts.push({ nx, nz, deck: true });
+      }
+      for (const ct of contacts) {
+        const vn = vx * ct.nx + vz * ct.nz;
+        if (ct.deck) {
+          if (vn > 0) { vx -= vn * ct.nx; vz -= vn * ct.nz; }
+        } else if (vn < 0) {
+          vx -= vn * ct.nx;
+          vz -= vn * ct.nz;
         }
       }
-      return { x, z };
+      return { x, z, vx, vz };
     }
 
     function movePlayer(dt) {
@@ -1836,17 +1966,20 @@
       const len = Math.hypot(ix, iz);
       if (len > 1) { ix /= len; iz /= len; }
       const mag = useTouch && len > 0 ? Math.min(1, Math.hypot(joy.x, joy.y)) : (len > 0 ? 1 : 0);
+      const sprinting = !!(keys.ShiftLeft || keys.ShiftRight);
+      const maxSpeed = sprinting ? SPRINT_SPEED : WALK_SPEED;
       const s = Math.sin(player.yaw), c = Math.cos(player.yaw);
-      const wishX = (ix * c + iz * s) * MAX_SPEED * mag;
-      const wishZ = (-ix * s + iz * c) * MAX_SPEED * mag;
+      const wishX = (ix * c + iz * s) * maxSpeed * mag;
+      const wishZ = (-ix * s + iz * c) * maxSpeed * mag;
       const rate = mag > 0.05 ? ACCEL : DECEL;
       const k = 1 - Math.exp(-rate * dt);
       player.vx += (wishX - player.vx) * k;
       player.vz += (wishZ - player.vz) * k;
       if (Math.abs(player.vx) < 0.01) player.vx = 0;
       if (Math.abs(player.vz) < 0.01) player.vz = 0;
-      const r = resolve(player.x + player.vx * dt, player.z + player.vz * dt);
+      const r = resolve(player.x + player.vx * dt, player.z + player.vz * dt, player.vx, player.vz, dt);
       player.x = r.x; player.z = r.z;
+      player.vx = r.vx; player.vz = r.vz;
     }
 
     function nearestNpc() {
@@ -2484,7 +2617,9 @@
       if (!playerMixer || menu !== 'play') return;
       const speed = Math.hypot(player.vx, player.vz);
       fadePlayer(speed > 0.35 ? 'walk' : 'idle');
-      if (playerActions && playerActions.walk) playerActions.walk.setEffectiveTimeScale(0.85 + Math.min(1.4, speed));
+      if (playerActions && playerActions.walk) {
+        playerActions.walk.setEffectiveTimeScale(Math.min(1.45, Math.max(0.75, speed / 1.35)));
+      }
       playerMixer.update(dt);
     }
 
@@ -2587,7 +2722,7 @@
       $('dialogue').style.display = 'none';
       $('win').style.display = 'none';
       player.x = 0; player.z = 8.6; player.vx = 0; player.vz = 0;
-      player.yaw = 0; yawGoal = 0; player.pitch = -0.06; pitchGoal = -0.06;
+      player.yaw = 0; yawGoal = 0; visualYaw = 0; player.pitch = -0.06; pitchGoal = -0.06;
       openMenu('title');
     }
     function applyLoaded(data) {
@@ -2597,7 +2732,7 @@
         skin: p.skin, hairStyle: p.hairStyle || 'short', hairColor: p.hairColor, outfit: p.outfit
       };
       player.x = p.x; player.z = p.z; player.vx = 0; player.vz = 0;
-      player.yaw = p.yaw || 0; yawGoal = player.yaw;
+      player.yaw = p.yaw || 0; yawGoal = player.yaw; visualYaw = player.yaw;
       player.pitch = p.pitch || 0; pitchGoal = player.pitch;
       if (data.settings) settings = { ...DEFAULT_SETTINGS, ...data.settings };
       applyGraphics();
@@ -2668,7 +2803,7 @@
       $('char-error').textContent = '';
       avatar = { name, ...draft };
       player.x = 0; player.z = 8.6; player.vx = 0; player.vz = 0;
-      player.yaw = 0; yawGoal = 0; player.pitch = -0.06; pitchGoal = -0.06;
+      player.yaw = 0; yawGoal = 0; visualYaw = 0; player.pitch = -0.06; pitchGoal = -0.06;
       won = false;
       applyNpcSave(npcData.map((n) => ({ id: n.id, friendship: 40, talked: false, friend: false })));
       await enterPlay(false);
@@ -2750,10 +2885,10 @@
         }
       }
 
+      animateNpcs(dt, t);
       if (playing && menu === 'play' && !talking && $('win').style.display !== 'flex') movePlayer(dt);
       else { player.vx *= Math.max(0, 1 - dt * 8); player.vz *= Math.max(0, 1 - dt * 8); }
       applyPose(dt);
-      animateNpcs(dt, t);
       updatePlayerAnim(dt);
       updateLabels();
       updatePrompt();
@@ -2797,9 +2932,22 @@
       },
       setView(x, z, yaw, pitch) {
         player.x = x; player.z = z; player.vx = 0; player.vz = 0;
-        if (yaw != null) { player.yaw = yaw; yawGoal = yaw; }
+        if (yaw != null) { player.yaw = yaw; yawGoal = yaw; visualYaw = yaw; }
         if (pitch != null) { player.pitch = pitch; pitchGoal = pitch; }
         applyPose(1);
+      },
+      holdKey(code, down) { keys[code] = !!down; },
+      getPlayer() {
+        return { x: player.x, z: player.z, vx: player.vx, vz: player.vz, yaw: player.yaw };
+      },
+      step(n, dt) {
+        const h = dt || 1 / 60;
+        for (let i = 0; i < (n || 1); i++) {
+          animateNpcs(h, 0);
+          movePlayer(h);
+        }
+        applyPose(h);
+        return this.getPlayer();
       },
       setAnim(name, anim) {
         const n = npcs.find((p) => p.name === name);
