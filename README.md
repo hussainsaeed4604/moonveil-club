@@ -10,16 +10,14 @@ Open the folder over HTTP (a local web server or GitHub Pages) and visit `index.
 
 ## Characters
 
-The bodies in the repo today are slim adult anime bases from the VRoid Project, CC0, about 11,000 triangles each, with textures small enough that `female.glb` and `male.glb` stay under a megabyte. Robes, sleeves, sashes, and the three hairstyles are built on that skeleton so one base can take any color. Desktop quality uses a denser cloth and hair mesh. The Low graphics preset keeps a lighter version of the same clothes.
+The figures are CC0 VRoid bodies in hanfu, with three hairstyles and clips named `Idle`, `Walking_A`, `Dance`, and `Run`. Desktop Medium and High load the HQ files. Low graphics, and any touch or mobile session, load the LITE files. `assets/characters/manifest.json` turns both tiers on. The older `female.glb` and `male.glb` stay as a fallback if a tier file fails to load.
 
-A later character set can replace those bases without a code change. Put the files at:
+- `assets/characters/female_hq.glb` and `male_hq.glb`
+- `assets/characters/female_lite.glb` and `male_lite.glb`
 
-- `assets/characters/high/female.glb` and `male.glb` — about 40–70k triangles, 2K textures, used for Medium and High
-- `assets/characters/lite/female.glb` and `male.glb` — about 15–20k triangles, used for Low
+`SKIN` and `SKIN_FACE` share the skin tone. `HAIR`, `ROBE`, `ROBE_INNER`, `ACCENT`, and `ACCENT_PATTERN` take the creator colours. `FACE` (eyes, brows, mouth) is left untinted, and the sheer sleeves keep their own alpha. Hair style shows one of `Hair_Long`, `Hair_Topknot`, or `Hair_Bun`. The embedded clips play through an `AnimationMixer`. Notes, foot-lock speeds, and the NPC palette are in `docs/characters/`.
 
-Then set `"high": true` and/or `"lite": true` in `assets/characters/manifest.json`. Until a flag is true, the game keeps using the CC0 bases above. Both tiers should use the VRoid `J_Bip_*` bones, materials whose names contain `SKIN`, `HAIR`, `ROBE`, or `ACCENT` (the game tints those to the chosen colors), and clips named `Idle`, `Walking_A`, and `Dance`. If those clips are present they play instead of the built-in ones. If `ROBE` or `HAIR` materials are present, the procedural robe or hair is left off.
-
-Idle, walk, and dance crossfade with an `AnimationMixer`. Materials use toon shading, with a warm fill and a cool rim in the club.
+Idle, walk, dance, and run crossfade with an `AnimationMixer`. Materials use toon shading, with a warm fill and a cool rim in the club.
 
 | Regular | Read |
 | --- | --- |
@@ -33,7 +31,7 @@ A moon gate stands on the left of the lounge. Older saves still load: `short` ha
 
 ## Credits and licenses
 
-**VRoid base models** (`Base_Female`, `Base_Male`) by the VRoid Project (pixiv). The copies here are the CC0 exports documented at [VRoid's sample-model terms](https://vroid.pixiv.help/hc/en-us/articles/4402614652569) and mirrored on [OpenGameArt](https://opengameart.org/content/vroid-studio-cc0-models). License: **CC0 1.0**. A note is in `assets/licenses/vroid-cc0.txt`.
+**VRoid base models** (`Base_Female`, `Base_Male`, and the HairSample bodies used for the current figures) by the VRoid Project (pixiv). The copies here are the CC0 exports documented at [VRoid's sample-model terms](https://vroid.pixiv.help/hc/en-us/articles/4402614652569) and mirrored on [OpenGameArt](https://opengameart.org/content/vroid-studio-cc0-models). License: **CC0 1.0**. Notes are in `assets/licenses/vroid-cc0.txt` and `assets/characters/LICENSES.md`. Costumes, hairstyles, and the idle, walk, dance, and run clips were made for Moonveil Club.
 
 The earlier KayKit Adventurers pack (also CC0, Kay Lousberg) is no longer used for the characters. Its license note remains at `assets/licenses/kaykit-adventurers-CC0.txt`.
 

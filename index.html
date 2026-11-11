@@ -1374,18 +1374,21 @@
     world.add(moonGate);
 
 
-    // High and lite are drop-in paths for the later character set (VRoid J_Bip_* bones,
-    // materials named SKIN / HAIR / ROBE / ACCENT, clips Idle / Walking_A / Dance).
-    // manifest.json says which tiers are actually on disk; missing tiers use the CC0 bases.
+    // Desktop high/medium loads HQ. Low, and any touch or mobile session, loads LITE.
+    // manifest.json turns a tier on; a failed load falls back to the CC0 bases.
     const CHAR_TIERS = {
-      high: { female: 'assets/characters/high/female.glb', male: 'assets/characters/high/male.glb' },
-      lite: { female: 'assets/characters/lite/female.glb', male: 'assets/characters/lite/male.glb' }
+      high: { female: 'assets/characters/female_hq.glb', male: 'assets/characters/male_hq.glb' },
+      lite: { female: 'assets/characters/female_lite.glb', male: 'assets/characters/male_lite.glb' }
     };
     const CHAR_FALLBACK = { female: 'assets/characters/female.glb', male: 'assets/characters/male.glb' };
+    // Foot-lock speeds at model.scale = 1. adornFigure's uniform scale multiplies them.
+    const WALK_MPS = { female: 1.2326, male: 1.3615 };
+    const RUN_MPS = { female: 2.9575, male: 3.3214 };
     const modelPromises = {};
     let tierManifest = null;
     function modelTier() {
-      return settings.quality === 'low' ? 'lite' : 'high';
+      if (useTouch || settings.quality === 'low') return 'lite';
+      return 'high';
     }
     function ensureTierManifest() {
       if (tierManifest) return Promise.resolve(tierManifest);
@@ -1411,6 +1414,12 @@
     }
     function materialRole(name) {
       const n = String(name || '').toUpperCase();
+      // FACE stays on the eye/brow/mouth atlas. ROBE_SHEER keeps its authored lilac.
+      if (n === 'FACE' || n === 'ROBE_SHEER') return '';
+      if (n === 'SKIN' || n === 'SKIN_FACE') return 'SKIN';
+      if (n === 'HAIR') return 'HAIR';
+      if (n === 'ROBE' || n === 'ROBE_INNER') return 'ROBE';
+      if (n === 'ACCENT' || n === 'ACCENT_PATTERN') return 'ACCENT';
       if (/(^|_)ACCENT($|_)/.test(n)) return 'ACCENT';
       if (/(^|_)ROBE($|_)/.test(n)) return 'ROBE';
       if (/(^|_)HAIR($|_)/.test(n)) return 'HAIR';
@@ -1435,31 +1444,31 @@
         if (!obj.isMesh) return;
         const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
         mats.forEach((m) => {
-          if (!m) return;
+          if (!m || !m.color) return;
           const role = materialRole(m.name);
           if (!role || hex[role] == null) return;
-          if (m.color) m.color.setHex(hex[role]);
-          if (m.emissive && role !== 'SKIN') m.emissive.setHex(role === 'HAIR' ? look.hairColor : look.accent);
+          m.color.setHex(hex[role]);
         });
       });
     }
     function takeClips(gltf) {
-      const found = { idle: null, walk: null, dance: null };
+      const found = { idle: null, walk: null, dance: null, run: null };
       for (const clip of (gltf && gltf.animations) || []) {
         const n = clip.name || '';
         if (/^idle$/i.test(n)) found.idle = clip;
         else if (/walking_a/i.test(n)) found.walk = clip;
         else if (/^dance$/i.test(n)) found.dance = clip;
+        else if (/^run$/i.test(n)) found.run = clip;
       }
       if (found.idle && found.walk && found.dance) return found;
       return null;
     }
     const NPC_LOOK = {
-      lyra: { gender: 'female', skin: 0xf3c7a8, hairStyle: 'long', hairColor: 0x1a120e, robe: 0x2f8a62, accent: 0xe8d59a, accessory: 'pin', height: 1.7 },
-      vesper: { gender: 'male', skin: 0xe4c2a2, hairStyle: 'topknot', hairColor: 0x141414, robe: 0x24315c, accent: 0xd4b15a, accessory: 'crown', height: 1.78 },
-      rowan: { gender: 'male', skin: 0xd8b394, hairStyle: 'long', hairColor: 0x2c2118, robe: 0xd5dbe6, accent: 0x8d3030, accessory: 'sword', height: 1.82 },
-      lumi: { gender: 'female', skin: 0xffe0d2, hairStyle: 'bun', hairColor: 0xf0d48a, robe: 0xe7a0c8, accent: 0xfff1c4, accessory: 'pin', height: 1.62 },
-      grokk: { gender: 'male', skin: 0xc6d2a6, hairStyle: 'topknot', hairColor: 0x24180f, robe: 0x3c6a38, accent: 0xd7b15a, accessory: 'none', height: 1.9 }
+      lyra: { gender: 'female', skin: 0xf3c7a8, hairStyle: 'long', hairColor: 0x2a1d24, robe: 0x2f9a6c, accent: 0xe8d59a, accessory: 'pin', height: 1.7 },
+      vesper: { gender: 'male', skin: 0xe4c2a2, hairStyle: 'topknot', hairColor: 0x1e1c2a, robe: 0x2a3a70, accent: 0xd4b15a, accessory: 'crown', height: 1.78 },
+      rowan: { gender: 'male', skin: 0xd8b394, hairStyle: 'long', hairColor: 0x2c2118, robe: 0xe8edf6, accent: 0x9a3434, accessory: 'sword', height: 1.82 },
+      lumi: { gender: 'female', skin: 0xffe0d2, hairStyle: 'bun', hairColor: 0xf0d48a, robe: 0xf0a8d2, accent: 0xfff1c4, accessory: 'pin', height: 1.62 },
+      grokk: { gender: 'male', skin: 0xc6d2a6, hairStyle: 'topknot', hairColor: 0x24180f, robe: 0x467a40, accent: 0xd7b15a, accessory: 'none', height: 1.9 }
     };
     const loader = new GLTFLoader();
     const gameErrors = [];
@@ -1495,9 +1504,10 @@
       root.traverse((obj) => {
         if (!obj.isMesh) return;
         const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        const keepMesh = /^Hair_/i.test(obj.name || '') || obj.name === 'Acc_Hairpiece';
         const next = mats.map((m) => {
           const name = (m && m.name) || '';
-          if (!materialRole(name) && /CLOTH|Tops|Bottoms|Shoes|Tie|HAIR/i.test(name)) {
+          if (!keepMesh && !materialRole(name) && /CLOTH|Tops|Bottoms|Shoes|Tie/i.test(name)) {
             const hidden = m.clone();
             hidden.transparent = true;
             hidden.opacity = 0;
@@ -1507,10 +1517,14 @@
           }
           const map = m && m.map ? m.map : null;
           if (map) map.colorSpace = THREE.SRGBColorSpace;
+          if (m && m.emissiveMap) m.emissiveMap.colorSpace = THREE.SRGBColorSpace;
           const color = m && m.color ? m.color.clone() : new THREE.Color(0xffffff);
-          if (paintName(name)) {
+          // Legacy VRoid eye cards. The new FACE atlas is a toon material instead.
+          if (paintName(name) && !materialRole(name)) {
             const basic = new THREE.MeshBasicMaterial({
-              name, map, color, side: THREE.DoubleSide
+              name, map, color, side: THREE.DoubleSide,
+              transparent: !!(m && m.transparent),
+              opacity: m && m.opacity != null ? m.opacity : 1
             });
             if (/Iris/i.test(name)) {
               basic.alphaTest = 0.35;
@@ -1524,19 +1538,20 @@
             }
             return basic;
           }
-          const faceSkin = /Face/i.test(name) && /SKIN/i.test(name);
-          const tone = toonMat({
-            name, map, color,
-            emissive: new THREE.Color(0xffffff),
-            emissiveMap: map,
-            emissiveIntensity: faceSkin ? 0.62 : 0.3
+          return new THREE.MeshToonMaterial({
+            name,
+            gradientMap: gradientMap(),
+            map,
+            color,
+            emissive: m && m.emissive ? m.emissive.clone() : new THREE.Color(0x000000),
+            emissiveMap: (m && m.emissiveMap) || null,
+            emissiveIntensity: m && m.emissiveIntensity != null ? m.emissiveIntensity : 1,
+            transparent: !!(m && m.transparent),
+            opacity: m && m.opacity != null ? m.opacity : 1,
+            alphaTest: m && m.alphaTest != null ? m.alphaTest : 0,
+            side: m && m.side != null ? m.side : THREE.FrontSide,
+            depthWrite: !m || m.depthWrite !== false
           });
-          if (m.alphaTest > 0) tone.alphaTest = m.alphaTest;
-          if (m.transparent) {
-            tone.transparent = true;
-            tone.depthWrite = false;
-          }
-          return tone;
         });
         obj.material = next.length === 1 ? next[0] : next;
         obj.castShadow = true;
@@ -1550,9 +1565,9 @@
         if (!obj.isMesh) return;
         const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
         mats.forEach((m) => {
-          if (!m || !/SKIN/i.test(m.name || '')) return;
+          if (!m || materialRole(m.name) !== 'SKIN') return;
           m.color.copy(tint);
-          if (m.emissive && m.emissiveMap) m.emissive.copy(tint);
+          if (m.emissive) m.emissive.copy(m.color).multiplyScalar(0.12);
         });
       });
     }
@@ -2252,19 +2267,72 @@
       ornament.traverse((obj) => { if (obj.isMesh) { obj.castShadow = true; obj.frustumCulled = false; } });
       head.add(ornament);
     }
+    function applyHairStyle(root, look) {
+      const style = look.hairStyle === 'topknot' || look.hairStyle === 'bun' ? look.hairStyle : 'long';
+      const show = { Hair_Long: style === 'long', Hair_Topknot: style === 'topknot', Hair_Bun: style === 'bun' };
+      const female = look.gender !== 'male';
+      const showPiece = female && look.accessory !== 'sword' && look.accessory !== 'none';
+      let found = false;
+      root.traverse((obj) => {
+        if (show[obj.name] != null) {
+          obj.visible = show[obj.name];
+          found = true;
+        }
+        if (obj.name === 'Acc_Hairpiece') obj.visible = showPiece;
+      });
+      root.userData.gender = female ? 'female' : 'male';
+      root.userData.hairStyle = style;
+      root.userData.showHairpiece = showPiece;
+      return found;
+    }
+    function addCarriedSword(root, look) {
+      const chestBone = findBone(root, 'J_Bip_C_UpperChest') || findBone(root, 'J_Bip_C_Chest');
+      if (!chestBone) return;
+      const old = chestBone.getObjectByName('PlayerAccessory');
+      if (old) chestBone.remove(old);
+      if ((look.accessory || '') !== 'sword') return;
+      const accent = new THREE.Color(look.accent || 0xe6d2a2);
+      const sword = new THREE.Group();
+      sword.name = 'PlayerAccessory';
+      const blade = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.62, 0.008), toonMat({
+        color: 0xf4f7fb, emissive: 0xd5deea, emissiveIntensity: 0.18
+      }));
+      blade.position.y = 0.16;
+      const guard = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.018, 0.02), toonMat({
+        color: accent, emissive: accent, emissiveIntensity: 0.16
+      }));
+      guard.position.y = -0.14;
+      const grip = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.14, 0.016), toonMat({
+        color: 0x3a2418, emissive: 0x3a2418, emissiveIntensity: 0.08
+      }));
+      grip.position.y = -0.22;
+      sword.add(blade, guard, grip);
+      sword.position.set(0.02, -0.06, 0.16);
+      sword.rotation.z = 25 * Math.PI / 180;
+      sword.traverse((obj) => { if (obj.isMesh) { obj.castShadow = true; obj.frustumCulled = false; } });
+      chestBone.add(sword);
+    }
     function adornFigure(model, look, opts) {
       const roles = findRoles(model);
       hideCloth(model);
       recolorByRole(model, look);
       tintSkin(model, look.skin);
+      const styledHair = applyHairStyle(model, look);
       if (!roles.ROBE) addRobe(model, look);
-      if (!roles.HAIR) addStyledHair(model, look);
+      else addCarriedSword(model, look);
+      if (!roles.HAIR && !styledHair) addStyledHair(model, look);
       model.rotation.y = Math.PI;
-      if (!opts || !opts.keepBindPose) applyRestPose(model);
+      // New figures already rest with the arms down. The old offset is only for the CC0 bases.
+      if ((!opts || !opts.keepBindPose) && !styledHair) applyRestPose(model);
       model.updateMatrixWorld(true);
       const box = new THREE.Box3();
+      const styleMesh = { Hair_Long: 1, Hair_Topknot: 1, Hair_Bun: 1 };
       model.traverse((obj) => {
-        if (obj.isMesh && obj.visible && obj.material && obj.material.opacity !== 0 && obj.material.colorWrite !== false) box.expandByObject(obj);
+        if (!obj.isMesh) return;
+        const mat = obj.material;
+        if (mat && !Array.isArray(mat) && (mat.opacity === 0 || mat.colorWrite === false)) return;
+        if (!obj.visible && !styleMesh[obj.name]) return;
+        box.expandByObject(obj);
       });
       const height = Math.max(0.2, box.max.y - box.min.y);
       const target = look.height || 1.72;
@@ -2274,6 +2342,29 @@
       model.position.y -= grounded.min.y;
       const head = findBone(model, 'J_Bip_C_Head');
       return { head, labelY: target + 0.18 };
+    }
+    function clipsFor(model, authored) {
+      if (authored) return authored;
+      if (model.getObjectByName('Hair_Long')) {
+        throw new Error('Character is missing Idle, Walking_A, and Dance clips');
+      }
+      return buildHumanClips(model);
+    }
+    function playClips(mixer, model, clips) {
+      const actions = {};
+      for (const key of ['idle', 'walk', 'dance', 'run']) {
+        if (!clips[key]) {
+          if (key === 'run') continue;
+          throw new Error('Missing the ' + key + ' clip');
+        }
+        const action = mixer.clipAction(clips[key], model);
+        action.setLoop(THREE.LoopRepeat, Infinity);
+        action.enabled = true;
+        action.play();
+        action.setEffectiveWeight(key === 'idle' ? 1 : 0);
+        actions[key] = action;
+      }
+      return actions;
     }
     function buildHumanClips(root) {
       const armBones = {
@@ -2386,20 +2477,11 @@
 
     function bindAnimations(npc, model, authored) {
       const mixer = new THREE.AnimationMixer(model);
-      const clips = authored || buildHumanClips(model);
-      const actions = {};
-      for (const key of ['idle', 'walk', 'dance']) {
-        if (!clips[key]) throw new Error(npc.name + ' is missing the ' + key + ' clip');
-        const action = mixer.clipAction(clips[key]);
-        action.setLoop(THREE.LoopRepeat, Infinity);
-        action.enabled = true;
-        action.play();
-        action.setEffectiveWeight(key === 'idle' ? 1 : 0);
-        actions[key] = action;
-      }
       npc.mixer = mixer;
-      npc.actions = actions;
+      npc.actions = playClips(mixer, model, clipsFor(model, authored));
       npc.currentAnim = 'idle';
+      npc.gender = model.userData.gender || 'female';
+      npc.modelScale = model.scale.x || 1;
       npc.ready = true;
     }
 
@@ -2925,7 +3007,9 @@
         let timeScale = 1;
         if (n.moving && !talkingTo) {
           anim = 'walk';
-          timeScale = n.kind === 'orc' ? 0.82 : n.kind === 'fairy' ? 1.18 : 1;
+          const gameSpeed = n.kind === 'fairy' ? 1.25 : n.kind === 'orc' ? 0.85 : 1.0;
+          const base = (WALK_MPS[n.gender] || 1.3) * (n.modelScale || 1);
+          timeScale = Math.min(1.3, Math.max(0.7, gameSpeed / base));
         } else if ((n.dance || n.kind === 'fairy') && !talkingTo) {
           anim = 'dance';
           timeScale = beatOn ? 1.12 : 0.92;
@@ -2950,7 +3034,8 @@
 
     const SAVE_VERSION = 1;
     const SKINS = [0xffe0cc, 0xf0c4a0, 0xd09a74, 0xa56b45, 0x6b3e2e, 0x3a2418];
-    const HAIR_COLORS = [0x1a120e, 0x6b3a22, 0xc45c2a, 0xe6c36a, 0xf4f0ea, 0x8a3048];
+    const HAIR_VIOLET_BLACK = 0x2a1830;
+    const HAIR_COLORS = [HAIR_VIOLET_BLACK, 0x6b3a22, 0xc45c2a, 0xe6c36a, 0xf4f0ea, 0x8a3048];
     const OUTFITS = [0x2f8a62, 0x24315c, 0xd5dbe6, 0x8a3038, 0xe7a0c8, 0x1c1c22];
     const ACCENTS = [0xe8d59a, 0xf4f0ea, 0xc45c4a, 0x7ec8c4, 0x111111];
     let draft = { gender: 'female', skin: SKINS[1], hairStyle: 'long', hairColor: HAIR_COLORS[0], robe: OUTFITS[0], accent: ACCENTS[0], accessory: 'pin', outfit: OUTFITS[0] };
@@ -3215,103 +3300,29 @@
       applyGraphics();
     }
 
-    function tintMesh(root, pattern, hex) {
-      root.traverse((obj) => {
-        if (!obj.isMesh || !pattern.test(obj.name)) return;
-        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-        const next = mats.map((m) => {
-          const copy = m.clone();
-          copy.color.setHex(hex);
-          copy.side = THREE.DoubleSide;
-          return copy;
-        });
-        obj.material = next.length === 1 ? next[0] : next;
-      });
-    }
-    function clearHair(root) {
-      const old = root.getObjectByName('PlayerHair');
-      if (old && old.parent) old.parent.remove(old);
-    }
-    function addHair(root, style, color) {
-      clearHair(root);
-      const head = root.getObjectByName('head');
-      if (!head) return;
-      const group = new THREE.Group();
-      group.name = 'PlayerHair';
-      const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
-      if (style === 'short') {
-        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.58), mat);
-        cap.name = 'HairCap';
-        cap.position.y = 0.2;
-        group.add(cap);
-      } else if (style === 'tied') {
-        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), mat);
-        cap.name = 'HairCap';
-        cap.position.y = 0.2;
-        const tail = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.34, 4, 8), mat);
-        tail.name = 'HairTail';
-        tail.position.set(0, 0.02, -0.12);
-        group.add(cap, tail);
-      } else {
-        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.62), mat);
-        cap.name = 'HairCap';
-        cap.position.y = 0.18;
-        const fall = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.55, 4, 8), mat);
-        fall.name = 'HairFall';
-        fall.position.set(0, -0.12, -0.08);
-        group.add(cap, fall);
-      }
-      group.traverse((obj) => { if (obj.isMesh) { obj.castShadow = true; obj.frustumCulled = false; } });
-      head.add(group);
-    }
-    function dress(root, look) {
-      root.traverse((obj) => {
-        if (!obj.isMesh) return;
-        obj.castShadow = true;
-        obj.receiveShadow = true;
-        obj.frustumCulled = false;
-        obj.visible = true;
-      });
-      const hide = look.gender === 'male'
-        ? ['Knight_Helmet', '1H_Sword', 'Round_Shield']
-        : [];
-      root.traverse((obj) => { if (hide.includes(obj.name)) obj.visible = false; });
-      tintMesh(root, /Head/, look.skin);
-      tintMesh(root, /Body|Leg|Arm|Cape/, look.outfit);
-      addHair(root, look.hairStyle, look.hairColor);
-    }
-    function fitPlayer(root) {
-      root.scale.setScalar(1);
-      root.position.set(0, 0, 0);
-      root.updateMatrixWorld(true);
-      const box = new THREE.Box3();
-      root.traverse((obj) => {
-        if (obj.isMesh && obj.visible && /Arm|Body|Head|Leg/.test(obj.name)) box.expandByObject(obj);
-      });
-      const height = Math.max(0.2, box.max.y - box.min.y);
-      root.scale.setScalar(1.72 / height);
-      root.updateMatrixWorld(true);
-      const grounded = new THREE.Box3();
-      root.traverse((obj) => {
-        if (obj.isMesh && obj.visible && /Leg|Body/.test(obj.name)) grounded.expandByObject(obj);
-      });
-      if (!grounded.isEmpty()) root.position.y -= grounded.min.y;
-    }
     function setFirstPersonHide(hideHead) {
       if (!playerModel) return;
+      const style = playerModel.userData.hairStyle || 'long';
+      const showHair = { Hair_Long: style === 'long', Hair_Topknot: style === 'topknot', Hair_Bun: style === 'bun' };
       playerModel.traverse((obj) => {
         const n = obj.name || '';
-        if (n === 'Face' || n === 'Face.baked' || n === 'PlayerHair' || n === 'PlayerAccessory') obj.visible = !hideHead;
+        const isStyle = Object.prototype.hasOwnProperty.call(showHair, n);
+        const isHead = n === 'Face' || n === 'Face.baked' || n === 'PlayerHair' || n === 'PlayerAccessory' || n === 'Hair_Base' || n === 'Acc_Hairpiece' || isStyle;
+        if (!isHead) return;
+        if (isStyle) obj.visible = !hideHead && showHair[n];
+        else if (n === 'Acc_Hairpiece') obj.visible = !hideHead && !!playerModel.userData.showHairpiece;
+        else obj.visible = !hideHead;
       });
     }
     function canonLook(raw) {
       const hairMap = { short: 'bun', tied: 'topknot', long: 'long', topknot: 'topknot', bun: 'bun' };
       const gender = raw.gender === 'male' ? 'male' : 'female';
+      const hairColor = raw.hairColor == null || raw.hairColor === 0x1a120e ? HAIR_VIOLET_BLACK : raw.hairColor;
       return {
         gender,
         skin: raw.skin || 0xf0c4a0,
         hairStyle: hairMap[raw.hairStyle] || 'long',
-        hairColor: raw.hairColor || 0x1a120e,
+        hairColor,
         robe: raw.robe || raw.outfit || 0x2f6a4a,
         accent: raw.accent || 0xe6d2a2,
         accessory: raw.accessory || 'pin',
@@ -3325,15 +3336,7 @@
       const authored = takeClips(gltf);
       adornFigure(model, styled, { keepBindPose: !!authored });
       const mixer = new THREE.AnimationMixer(model);
-      const clips = authored || buildHumanClips(model);
-      const actions = {};
-      for (const key of ['idle', 'walk', 'dance']) {
-        const action = mixer.clipAction(clips[key], model);
-        action.setLoop(THREE.LoopRepeat, Infinity);
-        action.play();
-        action.setEffectiveWeight(key === 'idle' ? 1 : 0);
-        actions[key] = action;
-      }
+      const actions = playClips(mixer, model, clipsFor(model, authored));
       return { model, mixer, actions };
     }
     async function mountPlayer(look) {
@@ -3362,8 +3365,17 @@
     function updatePlayerAnim(dt) {
       if (!playerMixer || menu !== 'play') return;
       const speed = Math.hypot(player.vx, player.vz);
-      fadePlayer(speed > 0.35 ? 'walk' : 'idle');
-      if (playerActions && playerActions.walk) playerActions.walk.setEffectiveTimeScale(0.85 + Math.min(1.4, speed));
+      const gender = (playerModel && playerModel.userData.gender) || 'female';
+      const scale = playerModel ? Math.abs(playerModel.scale.x) || 1 : 1;
+      let mode = 'idle';
+      if (speed > 2.15 && playerActions && playerActions.run) mode = 'run';
+      else if (speed > 0.35) mode = 'walk';
+      fadePlayer(mode);
+      if ((mode === 'walk' || mode === 'run') && playerActions[mode]) {
+        const table = mode === 'run' ? RUN_MPS : WALK_MPS;
+        const base = (table[gender] || 1.3) * scale;
+        playerActions[mode].setEffectiveTimeScale(Math.min(1.3, Math.max(0.7, speed / base)));
+      }
       playerMixer.update(dt);
     }
 
