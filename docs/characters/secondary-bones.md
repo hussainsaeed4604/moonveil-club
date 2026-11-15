@@ -31,4 +31,17 @@ The values follow the UniVRM `VRMSpringBone` convention (stiffness 0–4, dragFo
 Tips:
 - Clamp each bone's swing to about 35° (skirt), 45° (sleeves, tassels) and 30° (hair) so nothing flips through the body during `Dance`/`Run`.
 - The skirt is also partly skinned to the thighs (about 40% at the hem), so it opens for the legs even with physics off. Physics should add to that motion, not replace it.
-- On iPhone, simulate only the skirt and the three back-hair chains, or drop to 30 Hz.
+- On iPhone, simulate only the skirt and the three back-hair chains, or drop to 30 Hz. The game does the first of those: the skirt and the back hair run every frame. Stepping every chain at 30 Hz was cheap, but the robe overshot and sat on its swing limit while walking.
+- A chain does not collide with a sphere on the bone it hangs from. The skirt hangs from the hips, so it uses the leg spheres and not the hip sphere. The back hair hangs from the head, so it uses the neck and chest, not the head sphere.
+
+## Values used in the game
+
+`spring-bones.js` starts from the sheet above. After watching the robes walk, two numbers changed so a stride can finish and the hem settles in about half a second. Gravity is not used to push the cloth off the legs; the spheres do that.
+
+| Group | stiffness | drag | gravity | hitRadius | swing cap | On a phone |
+| --- | --- | --- | --- | --- | --- | --- |
+| Skirt chains | 1.2 (root) → 0.8 (tip) | 0.22 (was 0.45) | 0.20 (was 0.15) | 0.06 | 35° | yes, every frame |
+| Sleeve chains | 0.9 | 0.40 | 0.20 | 0.05 | 45° | no |
+| Hair back | 0.8 | 0.28 (was 0.35) | 0.10 | 0.04 | 30° | yes, every frame |
+| Hair front locks | 1.0 | 0.40 | 0.10 | 0.02 | 30° | no |
+| Tassels | 0.5 | 0.25 | 0.35 | 0.01 | 45° | no |

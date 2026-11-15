@@ -559,6 +559,7 @@
     import * as THREE from 'three';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
+    import { createSpringSet } from './spring-bones.js';
     const $ = (id) => document.getElementById(id);
 
     function detectMobile() {
@@ -1030,6 +1031,32 @@
 
     const view = $('view');
     const isMobilePerf = useTouch || ((window.devicePixelRatio || 1) > 1.5 && window.innerWidth < 900);
+
+    // Phone spring budget. 'half' keeps every chain but steps the physics at
+    // 30 Hz. That was cheap, but a walking body moves between those steps and
+    // the cloth overshoots onto its swing limit. 'core' keeps the skirt and the
+    // back hair, every frame, which stays smooth. Sleeves, front locks, and
+    // tassels stay in their resting pose on a phone.
+    const PHONE_SPRING_POLICY = 'core';
+    const springCtl = { enabled: true, policy: 'auto' };
+    function springPhone() {
+      return useTouch || ((window.devicePixelRatio || 1) > 1.5 && window.innerWidth < 900);
+    }
+    function springPolicy() {
+      if (!springCtl.enabled) return 'off';
+      if (springCtl.policy && springCtl.policy !== 'auto') return springCtl.policy;
+      return springPhone() ? PHONE_SPRING_POLICY : 'full';
+    }
+    const springOpts = {
+      enabled() { return springCtl.enabled; },
+      policy: springPolicy
+    };
+    const FRAME_SAMPLES = 120;
+    const tickSamples = new Float64Array(FRAME_SAMPLES);
+    const springSamples = new Float64Array(FRAME_SAMPLES);
+    let frameCursor = 0;
+    let frameFilled = 0;
+    let springFrameMs = 0;
 
     const renderer = new THREE.WebGLRenderer({ antialias: settings.quality === 'high' && !useTouch, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, settings.dprCap) * settings.renderScale);
@@ -2482,6 +2509,7 @@
       npc.currentAnim = 'idle';
       npc.gender = model.userData.gender || 'female';
       npc.modelScale = model.scale.x || 1;
+      npc.springs = createSpringSet(model, springOpts);
       npc.ready = true;
     }
 
@@ -2570,6 +2598,7 @@
     let playerModel = null;
     let playerMixer = null;
     let playerActions = null;
+    let playerSprings = null;
     let playerAnim = 'idle';
     let saveTimer = 0;
     let yawGoal = 0, pitchGoal = -0.06;
@@ -3017,6 +3046,11 @@
         if (n.forceAnim) anim = n.forceAnim;
         fadeAnim(n, anim, timeScale);
         if (n.mixer) n.mixer.update(dt);
+        if (n.springs) {
+          const springT = performance.now();
+          n.springs.update(dt);
+          springFrameMs += performance.now() - springT;
+        }
 
         const hover = n.kind === 'fairy' && anim !== 'walk' ? 0.1 + Math.sin(t * 2.2 + n.phase) * 0.04 : 0;
         n.mesh.position.y = hover;
@@ -3045,6 +3079,7 @@
     let previewCam = null;
     let previewRig = null;
     let previewMixer = null;
+    let previewSprings = null;
     let frames = 0;
     let fpsAcc = 0;
 
@@ -3337,7 +3372,8 @@
       adornFigure(model, styled, { keepBindPose: !!authored });
       const mixer = new THREE.AnimationMixer(model);
       const actions = playClips(mixer, model, clipsFor(model, authored));
-      return { model, mixer, actions };
+      const springs = createSpringSet(model, springOpts);
+      return { model, mixer, actions, springs };
     }
     async function mountPlayer(look) {
       if (playerModel) {
@@ -3345,11 +3381,13 @@
         playerModel = null;
         playerMixer = null;
         playerActions = null;
+        playerSprings = null;
       }
       const figure = await makeFigure(look);
       playerModel = figure.model;
       playerMixer = figure.mixer;
       playerActions = figure.actions;
+      playerSprings = figure.springs;
       playerAnim = 'idle';
       playerAnchor.add(playerModel);
       footShadow.visible = true;
@@ -3377,6 +3415,11 @@
         playerActions[mode].setEffectiveTimeScale(Math.min(1.3, Math.max(0.7, speed / base)));
       }
       playerMixer.update(dt);
+      if (playerSprings) {
+        const springT = performance.now();
+        playerSprings.update(dt);
+        springFrameMs += performance.now() - springT;
+      }
     }
 
     function framePreviewCamera() {
@@ -3396,6 +3439,11 @@
       framePreviewCamera();
       previewRig.rotation.y += dt * 0.35;
       if (previewMixer) previewMixer.update(dt);
+      if (previewSprings) {
+        const springT = performance.now();
+        previewSprings.update(dt);
+        springFrameMs += performance.now() - springT;
+      }
       previewRenderer.render(previewScene, previewCam);
     }
     async function ensurePreview() {
@@ -3433,6 +3481,7 @@
       while (previewRig.children.length) previewRig.remove(previewRig.children[0]);
       const figure = await makeFigure(draft);
       previewMixer = figure.mixer;
+      previewSprings = figure.springs;
       previewRig.add(figure.model);
       previewRig.rotation.y = 0;
     }
@@ -3638,6 +3687,8 @@
     const clock = new THREE.Clock();
     function tick() {
       requestAnimationFrame(tick);
+      const tickStart = performance.now();
+      springFrameMs = 0;
       const dt = Math.min(0.05, clock.getDelta());
       const t = clock.elapsedTime;
 
@@ -3693,6 +3744,10 @@
         frames = 0; fpsAcc = 0;
       }
       renderer.render(scene, camera);
+      tickSamples[frameCursor] = performance.now() - tickStart;
+      springSamples[frameCursor] = springFrameMs;
+      frameCursor = (frameCursor + 1) % FRAME_SAMPLES;
+      if (frameFilled < FRAME_SAMPLES) frameFilled++;
     }
     tick();
 
@@ -3755,6 +3810,59 @@
         return { x: +q.x.toFixed(3), y: +q.y.toFixed(3), z: +q.z.toFixed(3), w: +q.w.toFixed(3), anim: n.currentAnim };
       },
       charactersReady: () => charactersReady,
+      holdKey(code, down) { keys[code] = !!down; },
+      setThirdPerson(v) { thirdPerson = !!v; },
+      setJoy(x, y) { joy.x = x || 0; joy.y = y || 0; },
+      setSprings(on) { springCtl.enabled = !!on; },
+      setSpringPolicy(p) { springCtl.policy = p || 'auto'; },
+      springMode() { return springPolicy(); },
+      springPhone() { return springPhone(); },
+      springInfo() {
+        const characters = npcs.map((n) => ({
+          name: n.name,
+          gender: n.gender || null,
+          ...(n.springs ? n.springs.describe() : { bones: 0, chains: 0 })
+        }));
+        if (playerSprings) characters.push({ name: 'you', ...(playerSprings.describe()) });
+        return { policy: springPolicy(), phone: springPhone(), characters };
+      },
+      springPose() {
+        const read = (name, set) => (set && set.sample) ? { name, ...set.sample() } : null;
+        const figures = npcs.map((n) => read(n.name, n.springs)).filter(Boolean);
+        const you = read('you', playerSprings);
+        if (you) figures.push(you);
+        return figures;
+      },
+      motion() {
+        return { x: player.x, z: player.z, vx: player.vx, vz: player.vz, menu, playing, yaw: player.yaw };
+      },
+      clearFrameSample() {
+        frameCursor = 0;
+        frameFilled = 0;
+      },
+      frameSample() {
+        const n = frameFilled;
+        if (!n) return { frames: 0, tickAvg: 0, springAvg: 0, tickMax: 0, springMax: 0 };
+        let tickSum = 0;
+        let springSum = 0;
+        let tickMax = 0;
+        let springMax = 0;
+        const start = frameFilled < FRAME_SAMPLES ? 0 : frameCursor;
+        for (let i = 0; i < n; i++) {
+          const k = (start + i) % FRAME_SAMPLES;
+          tickSum += tickSamples[k];
+          springSum += springSamples[k];
+          if (tickSamples[k] > tickMax) tickMax = tickSamples[k];
+          if (springSamples[k] > springMax) springMax = springSamples[k];
+        }
+        return {
+          frames: n,
+          tickAvg: tickSum / n,
+          springAvg: springSum / n,
+          tickMax,
+          springMax
+        };
+      },
       getNpcs: () => npcs.map((n) => ({
         name: n.name, role: n.role, friendship: n.friendship,
         x: n.mesh.position.x, z: n.mesh.position.z, yaw: n.yaw,
